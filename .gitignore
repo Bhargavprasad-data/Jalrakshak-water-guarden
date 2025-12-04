@@ -1,0 +1,90 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+ENV/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database
+*.db
+*.sqlite
+
+# Docker
+.dockerignore
+
+# ESP32
+.pio/
+.vscode/
+
+# Models
+*.h5
+*.pkl
+*.joblib
+models/*.h5
+models/*.pkl
+
+# Secrets
+secrets/
+*.key
+*.pem
+
+# Uploads
+backend/uploads/
+uploads/
+
+# Large data files
+*.csv
+Final_Dataset.csv
+*.xlsx
+*.xls
+*.zip
+*.tar.gz
+
+# Executables
+*.exe
+postgresql.exe
+backend/postgresql.exe
+
+# Lock files
+package-lock.json
+yarn.lock
+bun.lockb
+
+# Cache
+.cache/
+.npm/
+.yarn/
+
+

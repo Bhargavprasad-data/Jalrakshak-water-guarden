@@ -1,0 +1,31 @@
+{
+  "name": "jalrakshak-dashboard",
+  "version": "1.0.0",
+  "description": "JalRakshak GIS Dashboard - Real-time Water Supply Monitoring",
+  "private": true,
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.0",
+    "leaflet": "^1.9.4",
+    "react-leaflet": "^4.2.1",
+    "leaflet.heat": "^0.2.0",
+    "axios": "^1.6.2",
+    "recharts": "^2.10.3",
+    "socket.io-client": "^4.5.4",
+    "date-fns": "^2.30.0",
+    "react-toastify": "^9.1.3",
+    "react-select": "^5.8.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.0.8"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  }
+}
+
