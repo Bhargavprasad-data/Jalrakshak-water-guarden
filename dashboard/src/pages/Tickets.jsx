@@ -57,10 +57,11 @@ useEffect(() => {
 const fetchTickets = async () => {
   if (locationStatus !== 'granted' || !nearestVillage) return
     try {
-      const params = activeTab !== 'all' ? { status: activeTab } : {}
-      // Add limit to get all tickets
-      params.limit = 1000
-    params.village_id = nearestVillage.id
+      // Fetch ALL tickets for the village (not filtered by status) to show accurate counts for all tabs
+      const params = {
+        village_id: nearestVillage.id,
+        limit: 1000 // Get all tickets to calculate accurate counts
+      }
       
       // Fetch tickets and dynamic stats in parallel like Dashboard and Alerts
       const [ticketsRes, dynamicStatsRes] = await Promise.allSettled([
@@ -140,16 +141,37 @@ const fetchTickets = async () => {
     }
   }
 
-  const tabs = [
-    { 
-      id: 'open', 
-      label: 'Open', 
-      count: tickets.filter(t => t.status === 'open').length,
-    },
-    { id: 'accepted', label: 'Assigned', count: tickets.filter(t => t.status === 'accepted').length },
-    { id: 'in_progress', label: 'In Progress', count: tickets.filter(t => t.status === 'in_progress').length },
-    { id: 'completed', label: 'Resolved', count: tickets.filter(t => t.status === 'completed').length }
-  ]
+  // Calculate accurate counts for all tabs from all tickets (filtered by selected village if not 'all')
+  const tabs = useMemo(() => {
+    // Filter tickets by selected village if not 'all'
+    let ticketsToCount = tickets;
+    if (selectedVillage !== 'all') {
+      ticketsToCount = tickets.filter(t => t.village_name === selectedVillage);
+    }
+    
+    return [
+      { 
+        id: 'open', 
+        label: 'Open', 
+        count: ticketsToCount.filter(t => t.status === 'open').length,
+      },
+      { 
+        id: 'accepted', 
+        label: 'Assigned', 
+        count: ticketsToCount.filter(t => t.status === 'accepted').length 
+      },
+      { 
+        id: 'in_progress', 
+        label: 'In Progress', 
+        count: ticketsToCount.filter(t => t.status === 'in_progress').length 
+      },
+      { 
+        id: 'completed', 
+        label: 'Resolved', 
+        count: ticketsToCount.filter(t => t.status === 'completed').length 
+      }
+    ];
+  }, [tickets, selectedVillage])
 
   const villageOptions = useMemo(() => {
     const names = new Set()

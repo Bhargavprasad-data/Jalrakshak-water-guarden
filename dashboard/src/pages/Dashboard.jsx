@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
 import { toast } from 'react-toastify'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
@@ -35,25 +35,7 @@ export default function Dashboard() {
     retryVillageLookup,
   } = useNearestVillage()
 
-  useEffect(() => {
-    if (locationStatus !== 'granted' || !nearestVillage) return
-
-    fetchData()
-    const fetchInterval = setInterval(() => {
-      fetchData()
-    }, 5000)
-
-    const timerInterval = setInterval(() => {
-      setLastSyncSeconds((prev) => prev + 1)
-    }, 1000)
-
-    return () => {
-      clearInterval(fetchInterval)
-      clearInterval(timerInterval)
-    }
-  }, [locationStatus, nearestVillage])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!nearestVillage) return
     try {
       const villageIdParam = `village_id=${encodeURIComponent(nearestVillage.id)}`
@@ -62,8 +44,8 @@ export default function Dashboard() {
         axios.get('/api/dynamic-stats/alerts-tickets').catch(err => ({ data: { activeAlerts: 0, openTickets: 0 } })),
         axios.get(`/api/alerts?acknowledged=false&${villageIdParam}`).catch(err => ({ data: [] })),
         axios.get(`/api/tickets?status=open&${villageIdParam}`).catch(err => ({ data: [] })),
-        axios.get('/api/device').catch(err => ({ data: [] })),
-        axios.get('/api/telemetry/stats/summary').catch(() => ({ data: null }))
+        axios.get(`/api/device?${villageIdParam}`).catch(err => ({ data: [] })),
+        axios.get(`/api/telemetry/stats/summary?${villageIdParam}`).catch(() => ({ data: null }))
       ])
 
       const telemetry = telemetryRes.status === 'fulfilled' ? telemetryRes.value.data : []
@@ -100,7 +82,8 @@ export default function Dashboard() {
             turbidity: reading.turbidity != null ? (typeof reading.turbidity === 'string' ? parseFloat(reading.turbidity) : reading.turbidity) : null,
           }
         })
-      setLiveData(recentReadings)
+      // Always create new array to ensure React detects changes
+      setLiveData([...recentReadings]); // Spread to ensure new array reference
 
       let avgPressure, avgFlow, avgPH
       if (stats && stats.avg_pressure !== null && stats.avg_pressure !== undefined) {
@@ -142,10 +125,20 @@ export default function Dashboard() {
         }
       }
 
-      // Use dynamic counts from telemetry data instead of static database records
-      // This ensures the counts reflect current conditions in the dataset
-      setStats({
-        totalDevices: devices.filter((device) => device.village_id === nearestVillage.id).length,
+      // Count unique devices that have telemetry data for this village
+      // Use stats API count if available (counts distinct devices from telemetry), 
+      // otherwise count from devices table, or fallback to unique devices from telemetry
+      let deviceCount = 0
+      if (stats && stats.total_devices !== null && stats.total_devices !== undefined) {
+        deviceCount = parseInt(stats.total_devices) || 0
+      } else {
+        const uniqueDevicesFromTelemetry = new Set(telemetry.map(t => t.device_id).filter(Boolean))
+        deviceCount = devices.length > 0 ? devices.length : uniqueDevicesFromTelemetry.size
+      }
+      
+      // Always create new stats object to ensure React detects changes (even if values are the same)
+      const newStats = {
+        totalDevices: deviceCount,
         // Use only the per-village data we just fetched, to match what the user sees
         activeAlerts: alerts.length,
         openTickets: tickets.length,
@@ -153,15 +146,40 @@ export default function Dashboard() {
         avgFlow: avgFlow,
         avgPH: avgPH,
         waterQuality: waterQuality
-      })
+      };
+      
+      setStats(newStats);
       // Reset "Last Sync" timer on successful refresh
       setLastSyncSeconds(0)
     } catch (error) {
-      console.error('Failed to fetch data:', error)
+      console.error('[Dashboard] Failed to fetch data:', error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [nearestVillage])
+
+  useEffect(() => {
+    if (locationStatus !== 'granted' || !nearestVillage) return
+
+    // Fetch immediately
+    fetchData()
+    
+    // Set up polling interval (every 5 seconds) - ensures data updates every 5 seconds
+    const fetchInterval = setInterval(() => {
+      // Always fetch - fetchData is stable via useCallback and uses latest nearestVillage
+      fetchData()
+    }, 5000)
+
+    // Set up timer interval (every 1 second for last sync display)
+    const timerInterval = setInterval(() => {
+      setLastSyncSeconds((prev) => prev + 1)
+    }, 1000)
+
+    return () => {
+      clearInterval(fetchInterval)
+      clearInterval(timerInterval)
+    }
+  }, [locationStatus, nearestVillage?.id, fetchData]) // Include fetchData in dependencies since it's now useCallback
 
   const resolveNearestVillage = async (lat, lng) => {
     try {
@@ -262,6 +280,28 @@ export default function Dashboard() {
     return isNaN(num) ? 'N/A' : num.toFixed(decimals)
   }
 
+  const formatVillageName = (name) => {
+    if (!name) return ''
+    try {
+      // Replace underscores with spaces and capitalize each word
+      const formatted = String(name)
+        .trim()
+        .replace(/_/g, ' ')
+        .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+        .split(' ')
+        .map(word => {
+          if (!word || word.length === 0) return ''
+          return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        })
+        .filter(word => word.length > 0)
+        .join(' ')
+      return formatted || name // Fallback to original if formatting fails
+    } catch (error) {
+      console.error('Error formatting village name:', error)
+      return name // Return original on error
+    }
+  }
+
   if (locationStatus !== 'granted' || !nearestVillage) {
     return (
       <div className="dashboard">
@@ -298,10 +338,10 @@ export default function Dashboard() {
 
       {/* Page Header */}
       <div className="page-header">
-        <h1>Dashboard {nearestVillage ? `• ${nearestVillage.name}` : ''}</h1>
+        <h1>Dashboard {nearestVillage ? `• ${formatVillageName(nearestVillage.name)}` : ''}</h1>
         <p className="page-subtitle">
           {nearestVillage
-            ? `Real-time monitoring for ${nearestVillage.name}`
+            ? `Real-time monitoring for ${formatVillageName(nearestVillage.name)}`
             : 'Real-time water monitoring and analytics'}
         </p>
       </div>
@@ -310,7 +350,7 @@ export default function Dashboard() {
       <div className="kpi-grid">
         <div className="kpi-card">
           <div className="kpi-header">
-          <h3>Total Devices</h3>
+          <h3>Total Villages</h3>
             <div className="kpi-icon" style={{ background: 'linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)' }}>
               📡
             </div>
@@ -338,7 +378,7 @@ export default function Dashboard() {
 
         <div className="kpi-card kpi-warning">
           <div className="kpi-header">
-          <h3>Open Tickets</h3>
+          <h3>Open Issues</h3>
             <div className="kpi-icon" style={{ background: 'linear-gradient(135deg, #facc15 0%, #fbbf24 100%)' }}>
               🎫
             </div>
@@ -601,7 +641,9 @@ export default function Dashboard() {
               <tbody>
                 {liveData.slice(0, 20).map((reading) => {
                 const meta = reading.metadata || {}
-                const deviceVillage = reading.village_name || (reading.village_id ? `Village ${reading.village_id}` : 'N/A')
+                const deviceVillage = reading.village_name 
+                  ? formatVillageName(reading.village_name) 
+                  : (reading.village_id ? `Village ${reading.village_id}` : 'N/A')
                   
                   return (
                     <tr key={reading.id}>

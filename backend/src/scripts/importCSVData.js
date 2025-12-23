@@ -66,7 +66,7 @@ function parseBoolean(value) {
 }
 
 // Resolve village name to village_id
-async function getOrCreateVillage(villageName, lat, lon) {
+async function getOrCreateVillage(villageName, lat, lon, district = null, mandal = null) {
   if (!villageName) return null;
   
   // Check if village exists
@@ -76,18 +76,34 @@ async function getOrCreateVillage(villageName, lat, lon) {
   );
   
   if (existing.rows.length > 0) {
+    // Update district and mandal if provided
+    if (district || mandal) {
+      await db.query(
+        `UPDATE villages SET 
+          district = COALESCE($1, district),
+          state = COALESCE($2, state)
+        WHERE id = $3`,
+        [district, mandal, existing.rows[0].id]
+      );
+    }
     return existing.rows[0].id;
   }
   
   // Create new village
   try {
     const result = await db.query(
-      `INSERT INTO villages (name, gps_lat, gps_lon)
-       VALUES ($1, $2, $3)
+      `INSERT INTO villages (name, gps_lat, gps_lon, district, state)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id`,
-      [String(villageName).trim(), parseNumber(lat), parseNumber(lon)]
+      [
+        String(villageName).trim(), 
+        parseNumber(lat), 
+        parseNumber(lon),
+        district || null,
+        mandal || null
+      ]
     );
-    logger.info(`Created village: ${villageName}`);
+    logger.info(`Created village: ${villageName} (${district}, ${mandal})`);
     return result.rows[0].id;
   } catch (error) {
     logger.warn(`Error creating village ${villageName}:`, error.message);
@@ -152,18 +168,27 @@ async function importTelemetryData(filePath, limit = 10000) {
     logger.info(`Reading CSV file: ${filePath}`);
     logger.info(`Limit: ${limit} rows`);
     
-    // Read CSV file
-    const workbook = XLSX.readFile(filePath);
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    
-    // Convert to JSON
-    const data = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+    // Read CSV or Excel file
+    let data;
+    if (filePath.endsWith('.csv')) {
+      // Read CSV file directly
+      const csvContent = fs.readFileSync(filePath, 'utf8');
+      const workbook = XLSX.read(csvContent, { type: 'string' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      data = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+    } else {
+      // Read Excel file
+      const workbook = XLSX.readFile(filePath);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      data = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+    }
     
     logger.info(`Total rows in CSV: ${data.length}`);
     
-    // Limit to specified number of rows
-    const rowsToImport = data.slice(0, limit);
+    // Limit to specified number of rows (if limit is provided)
+    const rowsToImport = limit ? data.slice(0, limit) : data;
     logger.info(`Importing ${rowsToImport.length} rows...`);
     
     let imported = 0;
@@ -178,6 +203,8 @@ async function importTelemetryData(filePath, limit = 10000) {
         // Extract data
         const deviceId = row.device_id || row['device_id'];
         const villageName = row.village || row['village'];
+        const district = row.District || row['District'];
+        const mandal = row.Mandal || row['Mandal'];
         const timestamp = row.timestamp || row['timestamp'];
         const lat = row.latitude || row['latitude'];
         const lon = row.longitude || row['longitude'];
@@ -205,7 +232,7 @@ async function importTelemetryData(filePath, limit = 10000) {
           if (villagesCache.has(cacheKey)) {
             villageId = villagesCache.get(cacheKey);
           } else {
-            villageId = await getOrCreateVillage(villageName, lat, lon);
+            villageId = await getOrCreateVillage(villageName, lat, lon, district, mandal);
             if (villageId) {
               villagesCache.set(cacheKey, villageId);
             }
@@ -305,8 +332,8 @@ async function importTelemetryData(filePath, limit = 10000) {
 async function main() {
   try {
     const args = process.argv.slice(2);
-    const filePath = args[0] || path.join(__dirname, '../../Final_Dataset.csv');
-    const limit = parseInt(args[1]) || 10000;
+    const filePath = args[0] || path.join(__dirname, '../../Final.csv');
+    const limit = parseInt(args[1]) || null; // null means import all rows
     
     if (!fs.existsSync(filePath)) {
       logger.error(`File not found: ${filePath}`);

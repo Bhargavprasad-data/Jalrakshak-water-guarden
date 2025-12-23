@@ -117,6 +117,9 @@ async function getAlerts(filters = {}) {
 
     const dbAlerts = await db.query(query, params);
     
+    // Return actual database alerts (not random samples)
+    // Sort by sent_at DESC to show newest first
+    
     // Also get dynamic alerts from telemetry data (leak_flag, contamination_flag, etc.)
     // This ensures we show alerts even if they haven't been processed into the alerts table yet
     let dynamicAlertsQuery = `
@@ -230,10 +233,12 @@ async function getAlerts(filters = {}) {
         AND DATE(a2.sent_at) = DATE(t.timestamp)
       )
       ORDER BY t.timestamp DESC
-      LIMIT 500
+      LIMIT 1000
     `;
     
     const dynamicResult = await db.query(dynamicAlertsQuery, dynamicParams);
+    
+    // Return actual telemetry-based alerts ordered by timestamp (newest first)
     
     // Convert dynamic alerts to alert format
     const dynamicAlerts = dynamicResult.rows

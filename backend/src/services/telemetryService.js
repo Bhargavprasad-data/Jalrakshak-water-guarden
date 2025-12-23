@@ -181,25 +181,18 @@ async function getAllLiveTelemetry(villageId = null) {
       paramIndex++;
     }
 
-    // Get latest records with variation to show dynamic data
-    // Since data may be historical, we get the most recent records by timestamp
-    // but add randomization to show different data points on each request
-    // This makes the chart dynamic while still showing recent data
+    // Get the most recent records ordered by timestamp (actual database data)
     query += ` 
       ORDER BY t.timestamp DESC
-      LIMIT 500`;
+      LIMIT 100`;
     
     const result = await db.query(query, params);
     
-    // Randomly sample 100 records from the most recent 500 to add variety
-    const shuffled = result.rows.sort(() => Math.random() - 0.5);
-    const sampled = shuffled.slice(0, 100);
-    
-    // Re-sort by timestamp for consistent ordering
-    sampled.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    // Return actual data sorted by timestamp (newest first)
+    const sorted = result.rows.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     
     // Enrich with anomaly flags from metadata and AI results
-    return sampled.map(row => {
+    return sorted.map(row => {
       // Parse metadata if it's a string
       let metadata = {};
       if (row.metadata) {
@@ -357,27 +350,36 @@ function calculateWaterQuality(turbidity, ph, temperature, conductivity) {
   };
 }
 
-async function getDashboardStats() {
+async function getDashboardStats(villageId = null) {
   try {
-    // Get statistics from a changing sample of data to show dynamic values
-    // This makes the dashboard show different values each refresh
-    // Strategy: Randomly sample from all available data to get varying averages
-    // Sample size of 300-500 records provides good variation while maintaining accuracy
-    const sampleSize = 400; // Adjust this to control variation (larger = more stable, smaller = more dynamic)
-    const result = await db.query(`
-      WITH sampled_telemetry AS (
+    // Get statistics from actual recent data (last 24 hours or last 1000 records)
+    // This shows real data from the database, not random samples
+    let query = `
+      WITH recent_telemetry AS (
         SELECT 
-          device_id,
-          pressure,
-          flow_rate,
-          ph,
-          turbidity,
-          temperature,
-          conductivity
-        FROM telemetry
-        WHERE (pressure IS NOT NULL OR flow_rate IS NOT NULL OR ph IS NOT NULL OR turbidity IS NOT NULL OR temperature IS NOT NULL)
-        ORDER BY RANDOM()
-        LIMIT $1
+          t.device_id,
+          t.pressure,
+          t.flow_rate,
+          t.ph,
+          t.turbidity,
+          t.temperature,
+          t.conductivity
+        FROM telemetry t
+        LEFT JOIN devices d ON t.device_id = d.device_id
+        WHERE (t.pressure IS NOT NULL OR t.flow_rate IS NOT NULL OR t.ph IS NOT NULL OR t.turbidity IS NOT NULL OR t.temperature IS NOT NULL)
+    `;
+    const params = [];
+    let paramIndex = 1;
+
+    if (villageId) {
+      query += ` AND d.village_id = $${paramIndex}`;
+      params.push(villageId);
+      paramIndex++;
+    }
+
+    query += `
+        ORDER BY t.timestamp DESC
+        LIMIT 1000
       )
       SELECT 
         COUNT(DISTINCT device_id) as total_devices,
@@ -396,8 +398,10 @@ async function getDashboardStats() {
         MAX(CAST(pressure AS DECIMAL)) FILTER (WHERE pressure IS NOT NULL AND CAST(pressure AS DECIMAL) > 0) as max_pressure,
         MIN(CAST(flow_rate AS DECIMAL)) FILTER (WHERE flow_rate IS NOT NULL AND CAST(flow_rate AS DECIMAL) > 0) as min_flow,
         MAX(CAST(flow_rate AS DECIMAL)) FILTER (WHERE flow_rate IS NOT NULL AND CAST(flow_rate AS DECIMAL) > 0) as max_flow
-      FROM sampled_telemetry
-    `, [sampleSize]);
+      FROM recent_telemetry
+    `;
+    
+    const result = await db.query(query, params);
 
     const stats = result.rows[0] || {};
     

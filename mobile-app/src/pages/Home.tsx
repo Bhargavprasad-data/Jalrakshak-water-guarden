@@ -2,15 +2,24 @@ import { StatusCard } from '@/components/StatusCard';
 import { NavCard } from '@/components/NavCard';
 import { BottomNav } from '@/components/BottomNav';
 import { useWater } from '@/contexts/WaterContext';
-import { Droplet, Clock, Droplets, AlertCircle } from 'lucide-react';
+import { Droplet, Clock, Droplets, AlertCircle, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { useMemo } from 'react';
 import logo from '@/assets/jalrakshak-logo.jpg';
 export default function Home() {
   const { supply, quality, alerts, t } = useWater();
-  const getQualityStatus = () => {
+  
+  // Dynamic quality status and icon (updates when quality.status changes)
+  const qualityStatus = useMemo(() => {
     if (quality.status === 'safe') return 'success';
     if (quality.status === 'moderate') return 'warning';
     return 'danger';
-  };
+  }, [quality.status]);
+
+  const qualityIcon = useMemo(() => {
+    if (quality.status === 'safe') return CheckCircle;
+    if (quality.status === 'moderate') return AlertTriangle;
+    return XCircle;
+  }, [quality.status]);
   return <div className="min-h-screen bg-muted pb-24">
       <div className="text-primary-foreground p-6 shadow-lg bg-[#0f82a8] flex items-center gap-4">
         <img 
@@ -48,10 +57,10 @@ export default function Home() {
           />
 
           <StatusCard
-            icon={Droplets}
+            icon={qualityIcon}
             title={t('home.waterQuality')}
             value={`${quality.status.charAt(0).toUpperCase() + quality.status.slice(1)}${Number.isFinite(quality.turbidity) ? ` (${quality.turbidity.toFixed(2)} NTU)` : ''}`}
-            status={getQualityStatus()}
+            status={qualityStatus}
           />
         </div>
 

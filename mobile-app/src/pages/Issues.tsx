@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { BottomNav } from '@/components/BottomNav';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -38,19 +38,39 @@ export default function Issues() {
 
   useEffect(() => {
     if (!user || user.role !== 'worker') return;
-    if (locationStatus !== 'granted' || !coords) return;
+    
+    // For workers, use assigned villages from user context
+    const assignedVillages = user?.assigned_villages || [];
+    
+    if (assignedVillages.length === 0) {
+      setTickets([]);
+      setLoading(false);
+      return;
+    }
+
+    // Use first assigned village (workers typically have one village)
+    const targetVillageId = assignedVillages[0];
 
     const controller = new AbortController();
 
     async function loadTickets() {
       try {
-        const url = new URL(`${API_BASE_URL}/api/mobile/worker/tickets`);
-        url.searchParams.set('lat', String(coords.lat));
-        url.searchParams.set('lon', String(coords.lon));
-        url.searchParams.set('status', activeTab);
-        url.searchParams.set('limit', '200');
+        // Use same endpoint as dashboard with village_id (same as dashboard)
+        // Fetch ALL tickets (not filtered by status) to show accurate counts for all tabs
+        const url = new URL(`${API_BASE_URL}/api/tickets`);
+        const params: Record<string, string> = {
+          village_id: targetVillageId,
+          limit: '1000', // Same limit as dashboard - get all tickets to calculate accurate counts
+        };
+        // Don't filter by status - fetch all tickets like dashboard
 
-        const headers: Record<string, string> = {};
+        Object.entries(params).forEach(([key, value]) => {
+          url.searchParams.set(key, value);
+        });
+
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
         if (token) {
           headers.Authorization = `Bearer ${token}`;
         }
@@ -66,7 +86,21 @@ export default function Issues() {
         }
 
         const data = (await res.json()) as Ticket[];
-        setTickets(Array.isArray(data) ? data : []);
+        
+        // Sort by severity (critical/high first) and then by created_at (newest first) - same as dashboard
+        const sortedTickets = (Array.isArray(data) ? data : []).sort((a, b) => {
+          // First sort by severity (critical > high > medium > low)
+          const severityOrder: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+          const severityDiff = (severityOrder[b.severity || 'low'] || 0) - (severityOrder[a.severity || 'low'] || 0);
+          if (severityDiff !== 0) return severityDiff;
+          
+          // Then sort by created_at (newest first)
+          const dateA = new Date(a.created_at || 0).getTime();
+          const dateB = new Date(b.created_at || 0).getTime();
+          return dateB - dateA;
+        });
+
+        setTickets(sortedTickets);
       } catch (err: any) {
         if (err.name === 'AbortError') return;
         console.error('Failed to load worker tickets', err);
@@ -84,24 +118,51 @@ export default function Issues() {
     setLoading(true);
     loadTickets();
 
-    // Poll for updates every 30 seconds
-    const THIRTY_SECONDS = 30 * 1000;
+    // Poll for updates every 5 seconds (same as dashboard)
+    const FIVE_SECONDS = 5 * 1000;
     const interval = setInterval(() => {
-      if (!controller.signal.aborted) {
+      if (!controller.signal.aborted && locationStatus === 'granted' && coords) {
         loadTickets();
       }
-    }, THIRTY_SECONDS);
+    }, FIVE_SECONDS);
 
     return () => {
       controller.abort();
       clearInterval(interval);
     };
-  }, [user, token, coords, locationStatus, activeTab, toast]);
+  }, [user, token, coords, locationStatus, toast]); // Removed activeTab dependency - fetch all tickets always
+
+  // Calculate accurate counts for all tabs from all tickets (same as dashboard)
+  const tabs = useMemo(() => {
+    return [
+      { 
+        id: 'open', 
+        label: 'Open', 
+        count: tickets.filter(t => t.status === 'open').length,
+      },
+      { 
+        id: 'accepted', 
+        label: 'Assigned', 
+        count: tickets.filter(t => t.status === 'accepted').length 
+      },
+      { 
+        id: 'in_progress', 
+        label: 'In Progress', 
+        count: tickets.filter(t => t.status === 'in_progress').length 
+      },
+      { 
+        id: 'completed', 
+        label: 'Resolved', 
+        count: tickets.filter(t => t.status === 'completed').length 
+      }
+    ];
+  }, [tickets]);
 
   const hasActiveTicket = tickets.some(
     (t) => t.status === 'accepted' || t.status === 'in_progress',
   );
 
+  // Filter tickets by activeTab only for display (same as dashboard)
   const visibleTickets =
     activeTab === 'open' && hasActiveTicket
       ? []
@@ -165,12 +226,19 @@ export default function Issues() {
     );
   }
 
-  if (locationStatus !== 'granted') {
+  // Check if worker has assigned villages
+  const assignedVillages = user?.assigned_villages || [];
+  if (assignedVillages.length === 0) {
     return (
       <div className="min-h-screen bg-muted pb-24 flex items-center justify-center">
-        <p className="text-sm text-muted-foreground px-4 text-center">
-          Please enable location to see nearby issues.
-        </p>
+        <div className="text-center p-4">
+          <p className="text-sm text-muted-foreground mb-2">
+            No village assigned to your account.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Please contact your administrator to assign a village to your account.
+          </p>
+        </div>
       </div>
     );
   }
@@ -186,22 +254,27 @@ export default function Issues() {
 
       <div className="p-4 space-y-4 max-w-lg mx-auto">
         <div className="flex gap-2 mb-2">
-          {(['open', 'accepted', 'in_progress', 'completed'] as TicketStatus[]).map(
-            (status) => (
-              <button
-                key={status}
-                type="button"
-                onClick={() => setActiveTab(status)}
-                className={`flex-1 px-3 py-2 rounded-full text-xs font-semibold ${
-                  activeTab === status
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-background text-muted-foreground border border-border'
-                }`}
-              >
-                {status.replace('_', ' ').toUpperCase()}
-              </button>
-            ),
-          )}
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id as TicketStatus)}
+              className={`flex-1 px-3 py-2 rounded-full text-xs font-semibold flex flex-col items-center gap-1 ${
+                activeTab === tab.id
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-background text-muted-foreground border border-border'
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                activeTab === tab.id
+                  ? 'bg-primary-foreground/20 text-primary-foreground'
+                  : 'bg-muted text-muted-foreground'
+              }`}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
         </div>
 
         {loading ? (

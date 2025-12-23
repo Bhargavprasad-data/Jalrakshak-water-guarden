@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { toast } from 'react-toastify'
 import './Login.css'
@@ -41,6 +41,7 @@ export default function Login() {
               onChange={(e) => setUsername(e.target.value)}
               required
               placeholder="Enter username or phone"
+              autoComplete="username"
             />
           </div>
           <div className="form-group">
@@ -51,11 +52,15 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="Enter password"
+              autoComplete="current-password"
             />
           </div>
           <button type="submit" className="btn btn-primary" disabled={loading}>
             {loading ? 'Logging in...' : 'Login'}
           </button>
+          <div className="form-footer">
+            <p>Don't have an account? <Link to="/signup">Sign Up</Link></p>
+          </div>
         </form>
       </div>
     </div>

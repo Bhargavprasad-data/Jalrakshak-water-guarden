@@ -4,11 +4,21 @@ const logger = require('../utils/logger');
 /**
  * Calculate dynamic alert and ticket counts based on current telemetry data
  * This provides real-time counts based on actual sensor readings and flags
+ * @param {string} villageId - Optional village ID to filter by
  */
-async function getDynamicAlertTicketCounts() {
+async function getDynamicAlertTicketCounts(villageId = null) {
   try {
-    // Get telemetry data with issues, with randomization to show different data each time
-    // This makes the counts dynamic and change based on different samples
+    // Get telemetry data with issues, filtered by village if provided
+    let villageFilter = '';
+    const params = [];
+    let paramIndex = 1;
+
+    if (villageId) {
+      villageFilter = `AND d.village_id = $${paramIndex}`;
+      params.push(villageId);
+      paramIndex++;
+    }
+
     const telemetryQuery = `
       WITH issues AS (
         SELECT 
@@ -19,6 +29,7 @@ async function getDynamicAlertTicketCounts() {
           t.turbidity,
           t.ph,
           t.metadata,
+          d.village_id,
           CASE 
             WHEN t.metadata->>'leak_flag' = 'true' THEN 'leak'
             WHEN t.metadata->>'contamination_flag' = 'true' THEN 'contamination'
@@ -42,6 +53,7 @@ async function getDynamicAlertTicketCounts() {
             ELSE 'medium'
           END as severity
         FROM telemetry t
+        LEFT JOIN devices d ON t.device_id = d.device_id
         WHERE (
           (t.metadata->>'leak_flag' = 'true') OR
           (t.metadata->>'contamination_flag' = 'true') OR
@@ -52,7 +64,8 @@ async function getDynamicAlertTicketCounts() {
           t.turbidity > 10 OR
           (t.ph < 6.5 OR t.ph > 8.5)
         )
-        ORDER BY RANDOM()
+        ${villageFilter}
+        ORDER BY t.timestamp DESC
         LIMIT 1000
       )
       SELECT DISTINCT ON (device_id, issue_type)
@@ -62,7 +75,7 @@ async function getDynamicAlertTicketCounts() {
       ORDER BY device_id, issue_type, timestamp DESC
     `;
 
-    const result = await db.query(telemetryQuery);
+    const result = await db.query(telemetryQuery, params);
     
     // Count unique alerts (one per device-issue combination)
     const alertMap = new Map();

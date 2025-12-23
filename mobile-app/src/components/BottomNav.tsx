@@ -14,6 +14,7 @@ export const BottomNav = () => {
     user?.role === 'worker'
       ? [
           { icon: Wrench, key: 'nav.issues', path: '/issues' as const },
+          { icon: AlertCircle, key: 'nav.alerts', path: '/alerts' as const },
           { icon: Settings, key: 'nav.settings', path: '/settings' as const },
         ]
       : [

@@ -9,6 +9,7 @@
     "migrate": "node src/db/run_migration.js",
     "migrate:all": "node src/db/run_all_migrations.js",
     "import:csv": "node src/scripts/importCSVData.js",
+    "populate:mandals": "node src/scripts/populateMandals.js",
     "test": "jest"
   },
   "keywords": ["iot", "water", "monitoring", "rural"],

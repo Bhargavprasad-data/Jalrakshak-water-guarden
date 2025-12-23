@@ -31,6 +31,9 @@ const importRoutes = require('./routes/import');
 const dataProcessorRoutes = require('./routes/dataProcessor');
 const dynamicStatsRoutes = require('./routes/dynamicStats');
 const mobileRoutes = require('./routes/mobile');
+const waterSupplyTimingsRoutes = require('./routes/waterSupplyTimings');
+const workersRoutes = require('./routes/workers');
+const workerRequestsRoutes = require('./routes/workerRequests');
 
 const app = express();
 const server = createServer(app);
@@ -62,6 +65,7 @@ const writeLimiter = rateLimit({
 // Apply strict limiter to write operations only
 app.use('/api/auth/login', writeLimiter);
 app.use('/api/auth/register', writeLimiter);
+app.use('/api/auth/admin/signup', writeLimiter);
 app.use('/api/import', writeLimiter); // Excel/CSV import is a write operation
 
 // No rate limiting for GET requests (read operations)
@@ -110,6 +114,13 @@ app.use('/api/import', importRoutes);
 app.use('/api/process', dataProcessorRoutes);
 app.use('/api/dynamic-stats', dynamicStatsRoutes);
 app.use('/api/mobile', mobileRoutes);
+app.use('/api/water-supply-timings', waterSupplyTimingsRoutes);
+app.use('/api/workers', workersRoutes);
+app.use('/api/worker-requests', workerRequestsRoutes);
+const usersRoutes = require('./routes/users');
+app.use('/api/users', usersRoutes);
+const adminRoutes = require('./routes/admin');
+app.use('/api/admin', adminRoutes);
 
 // WebSocket connection handling
 const clients = new Map();
@@ -218,8 +229,32 @@ mqttClient.on('message', async (topic, message) => {
 
 // Initialize database connection
 db.connect()
-  .then(() => {
+  .then(async () => {
     logger.info('Database connected successfully');
+    
+    // Run admin roles migration if mandal column doesn't exist
+    try {
+      const checkColumn = await db.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_schema = 'public' 
+          AND table_name = 'villages' 
+          AND column_name = 'mandal'
+        )
+      `);
+      
+      if (!checkColumn.rows[0].exists) {
+        logger.info('Mandal column not found. Running migration...');
+        const fs = require('fs');
+        const path = require('path');
+        const migrationPath = path.join(__dirname, '../db/migrations/create_admin_roles.sql');
+        const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
+        await db.query(migrationSQL);
+        logger.info('✅ Migration completed: mandal column added to villages table');
+      }
+    } catch (error) {
+      logger.warn('Migration check failed (non-critical):', error.message);
+    }
     
     // Start server
     const PORT = process.env.PORT || 3000;

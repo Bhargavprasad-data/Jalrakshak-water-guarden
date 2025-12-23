@@ -7,7 +7,8 @@ const router = express.Router();
 // Get dynamic alert and ticket counts based on current telemetry data
 router.get('/alerts-tickets', async (req, res) => {
   try {
-    const counts = await dynamicAlertService.getDynamicAlertTicketCounts();
+    const { village_id } = req.query;
+    const counts = await dynamicAlertService.getDynamicAlertTicketCounts(village_id);
     res.json(counts);
   } catch (error) {
     logger.error('Get dynamic stats error:', error);

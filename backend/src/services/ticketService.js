@@ -393,6 +393,9 @@ async function getTickets(filters = {}) {
 
     const dbTickets = await db.query(query, params);
     
+    // Return actual database tickets (not random samples)
+    // Sort by created_at DESC to show newest first
+    
     // Also get dynamic tickets from telemetry data (for high/critical severity issues)
     // This ensures we show tickets even if they haven't been processed into the tickets table yet
     let dynamicTicketsQuery = `
@@ -512,10 +515,12 @@ async function getTickets(filters = {}) {
           ELSE NULL
         END,
         t.timestamp DESC
-      LIMIT 500
+      LIMIT 1000
     `;
     
     const dynamicResult = await db.query(dynamicTicketsQuery, dynamicParams);
+    
+    // Return actual telemetry-based tickets ordered by timestamp (newest first)
     
     // Convert dynamic tickets to ticket format
     const dynamicTickets = dynamicResult.rows
@@ -569,7 +574,116 @@ async function getTickets(filters = {}) {
       return dateB - dateA;
     });
     
-    return combinedTickets.slice(0, filters.limit || 1000);
+    // Ensure village_name is populated for all tickets
+    // If missing, try to find it from GPS coordinates or device
+    const ticketsWithVillage = await Promise.all(
+      combinedTickets.slice(0, filters.limit || 1000).map(async (ticket) => {
+        // If village_name already exists, return as is
+        if (ticket.village_name) {
+          return ticket;
+        }
+
+        // Try to get village_name from village_id if available
+        if (ticket.village_id) {
+          try {
+            const villageResult = await db.query(
+              'SELECT name FROM villages WHERE id = $1',
+              [ticket.village_id]
+            );
+            if (villageResult.rows.length > 0) {
+              ticket.village_name = villageResult.rows[0].name;
+              return ticket;
+            }
+          } catch (err) {
+            logger.error('Error fetching village name:', err);
+          }
+        }
+
+        // Try to find village from GPS coordinates if available
+        if (ticket.gps_lat && ticket.gps_lon) {
+          try {
+            // Helper function for Haversine distance calculation
+            const getDistanceMeters = (lat1, lon1, lat2, lon2) => {
+              const toRadians = (value) => (value * Math.PI) / 180;
+              const R = 6371000; // Earth radius in meters
+              const dLat = toRadians(lat2 - lat1);
+              const dLon = toRadians(lon2 - lon1);
+              const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+              return R * c;
+            };
+
+            const gpsResult = await db.query(
+              `
+                SELECT id, name, gps_lat, gps_lon
+                FROM villages
+                WHERE gps_lat IS NOT NULL AND gps_lon IS NOT NULL
+              `
+            );
+
+            if (gpsResult.rows.length > 0) {
+              let closest = null;
+              let bestDistance = Infinity;
+              const ticketLat = parseFloat(ticket.gps_lat);
+              const ticketLon = parseFloat(ticket.gps_lon);
+
+              gpsResult.rows.forEach((village) => {
+                const villageLat = parseFloat(village.gps_lat);
+                const villageLon = parseFloat(village.gps_lon);
+                if (isNaN(villageLat) || isNaN(villageLon)) return;
+
+                const distance = getDistanceMeters(ticketLat, ticketLon, villageLat, villageLon);
+                if (distance < bestDistance) {
+                  bestDistance = distance;
+                  closest = village;
+                }
+              });
+
+              if (closest) {
+                ticket.village_name = closest.name;
+                ticket.village_id = closest.id;
+                return ticket;
+              }
+            }
+          } catch (err) {
+            logger.error('Error finding village from GPS:', err);
+          }
+        }
+
+        // Try to get village from device if device_id exists
+        if (ticket.device_id && !ticket.village_name) {
+          try {
+            const deviceResult = await db.query(
+              `
+                SELECT v.name as village_name, v.id as village_id
+                FROM devices d
+                LEFT JOIN villages v ON d.village_id = v.id
+                WHERE d.device_id = $1
+              `,
+              [ticket.device_id]
+            );
+            if (deviceResult.rows.length > 0 && deviceResult.rows[0].village_name) {
+              ticket.village_name = deviceResult.rows[0].village_name;
+              ticket.village_id = deviceResult.rows[0].village_id;
+              return ticket;
+            }
+          } catch (err) {
+            logger.error('Error fetching village from device:', err);
+          }
+        }
+
+        // If still no village_name, set a default
+        if (!ticket.village_name) {
+          ticket.village_name = 'Unknown location';
+        }
+
+        return ticket;
+      })
+    );
+    
+    return ticketsWithVillage;
   } catch (error) {
     logger.error('Error getting tickets:', error);
     throw error;

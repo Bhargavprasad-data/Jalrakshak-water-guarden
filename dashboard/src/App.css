@@ -192,6 +192,7 @@ select:focus {
 input[type="text"],
 input[type="number"],
 input[type="date"],
+input[type="time"],
 textarea {
   padding: 10px 16px;
   border: 1px solid var(--border-medium);

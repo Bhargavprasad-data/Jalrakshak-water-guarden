@@ -1,6 +1,7 @@
 const express = require('express');
 const mobileService = require('../services/mobileService');
 const ticketService = require('../services/ticketService');
+const alertService = require('../services/alertService');
 const logger = require('../utils/logger');
 const db = require('../db/connection');
 const { authenticateToken } = require('../middleware/auth');
@@ -24,25 +25,57 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
+// Helper: Haversine distance calculation (same as dashboard)
+function getDistanceMeters(lat1, lon1, lat2, lon2) {
+  const toRadians = (value) => (value * Math.PI) / 180;
+  const R = 6371000; // Earth radius in meters
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 // Helper: resolve nearest village for a given lat/lon (used for worker tickets)
+// Uses Haversine formula to match dashboard's useNearestVillage hook
 async function findNearestVillageId(lat, lon) {
   try {
     if (lat === null || lat === undefined || lon === null || lon === undefined) {
       return null;
     }
 
+    // Fetch all villages and calculate distance using Haversine (same as dashboard)
+    // This ensures mobile app and dashboard use identical location validation
     const result = await db.query(
       `
         SELECT id, gps_lat, gps_lon
         FROM villages
         WHERE gps_lat IS NOT NULL AND gps_lon IS NOT NULL
-        ORDER BY (gps_lat - $1)^2 + (gps_lon - $2)^2 ASC
-        LIMIT 1
       `,
-      [lat, lon],
     );
 
-    return result.rows[0]?.id || null;
+    if (!result.rows || result.rows.length === 0) {
+      return null;
+    }
+
+    let closest = null;
+    let bestDistance = Infinity;
+
+    result.rows.forEach((village) => {
+      const villageLat = parseFloat(village.gps_lat);
+      const villageLon = parseFloat(village.gps_lon);
+      if (isNaN(villageLat) || isNaN(villageLon)) return;
+
+      const distance = getDistanceMeters(lat, lon, villageLat, villageLon);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        closest = village.id;
+      }
+    });
+
+    return closest;
   } catch (error) {
     logger.error('Failed to find nearest village for worker tickets:', error);
     return null;
@@ -126,6 +159,36 @@ router.post('/worker/tickets/:ticket_id/update-status', authenticateToken, async
     logger.error('Mobile worker update ticket error:', error);
     res.status(500).json({
       error: 'Failed to update ticket status',
+      message: error.message,
+    });
+  }
+});
+
+// Worker: fetch alerts near their current village/location
+router.get('/worker/alerts', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role && req.user.role !== 'worker') {
+      return res.status(403).json({ error: 'Only workers can access worker alerts' });
+    }
+
+    const lat = req.query.lat !== undefined ? parseFloat(req.query.lat) : null;
+    const lon = req.query.lon !== undefined ? parseFloat(req.query.lon) : null;
+    const limit = parseInt(req.query.limit, 10) || 50;
+    const acknowledged = req.query.acknowledged === 'false' ? false : undefined;
+
+    const villageId = await findNearestVillageId(lat, lon);
+    
+    const alerts = await alertService.getAlerts({
+      village_id: villageId || undefined,
+      acknowledged,
+      limit,
+    });
+
+    res.json(alerts);
+  } catch (error) {
+    logger.error('Mobile worker alerts error:', error);
+    res.status(500).json({
+      error: 'Failed to load worker alerts',
       message: error.message,
     });
   }

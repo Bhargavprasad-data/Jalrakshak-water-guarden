@@ -158,6 +158,16 @@ export default function GISMap() {
     return num !== null ? num.toFixed(decimals) : 'N/A'
   }
 
+  const formatVillageName = (name) => {
+    if (!name) return ''
+    // Replace underscores with spaces and capitalize each word
+    return name
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+  }
+
   const acknowledgeAlert = async (alertId) => {
     try {
       await axios.post(`/api/alerts/${alertId}/acknowledge`)
@@ -256,10 +266,10 @@ export default function GISMap() {
 
       <div className="map-header">
         <div>
-          <h1>GIS Map {nearestVillage ? `• ${nearestVillage.name}` : ''}</h1>
+          <h1>GIS Map {nearestVillage && nearestVillage.name ? `• ${formatVillageName(nearestVillage.name)}` : ''}</h1>
           <p className="page-subtitle">
-            {nearestVillage
-              ? `Monitoring network around ${nearestVillage.name}`
+            {nearestVillage && nearestVillage.name
+              ? `Monitoring network around ${formatVillageName(nearestVillage.name)}`
               : 'Real-time sensor monitoring and pipeline visualization'}
           </p>
         </div>
@@ -270,13 +280,13 @@ export default function GISMap() {
             className="village-select"
           >
             <option value={nearestVillage?.id || ''}>
-              {nearestVillage?.name || 'Nearest Village'}
+              {nearestVillage?.name ? formatVillageName(nearestVillage.name) : 'Nearest Village'}
             </option>
             {villages
               .filter((v) => v.id !== nearestVillage?.id)
               .map((v) => (
                 <option key={v.id} value={v.id}>
-                  {v.name}
+                  {formatVillageName(v.name)}
                 </option>
               ))}
           </select>
@@ -358,7 +368,7 @@ export default function GISMap() {
                     <div className="sensor-popup">
                       <h3>{sensor.device_type?.replace('_', ' ').toUpperCase() || 'SENSOR'}</h3>
                       <p><strong>Device ID:</strong> {sensor.device_id}</p>
-                      {sensor.village_name && <p><strong>Village:</strong> {sensor.village_name}</p>}
+                      <p><strong>Village:</strong> {sensor.village_name ? formatVillageName(sensor.village_name) : (sensor.village_id ? `Village ${sensor.village_id}` : 'Unknown')}</p>
                       <p><strong>Status:</strong> <span style={{ color: statusColor }}>{getStatusText(sensor)}</span></p>
                       {sensor.flow_rate !== null && <p><strong>Flow:</strong> {formatNumber(sensor.flow_rate, 2)} L/min</p>}
                       {sensor.pressure !== null && <p><strong>Pressure:</strong> {formatNumber(sensor.pressure, 2)} bar</p>}
@@ -390,7 +400,7 @@ export default function GISMap() {
                   </div>
                   <div className="info-item">
                     <span className="info-label">Village</span>
-                    <span className="info-value">{selectedSensor.village_name || 'N/A'}</span>
+                    <span className="info-value">{selectedSensor.village_name ? formatVillageName(selectedSensor.village_name) : (selectedSensor.village_id ? `Village ${selectedSensor.village_id}` : 'Unknown')}</span>
                   </div>
                   <div className="info-item">
                     <span className="info-label">Status</span>

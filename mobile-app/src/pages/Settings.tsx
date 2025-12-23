@@ -29,7 +29,9 @@ export default function Settings() {
           ? 'Language set to English'
           : newLanguage === 'hindi'
             ? 'भाषा हिंदी पर सेट की गई'
-            : 'భాషను తెలుగుకు మార్చాం',
+            : newLanguage === 'tamil'
+              ? 'மொழி தமிழுக்கு மாற்றப்பட்டது'
+              : 'భాషను తెలుగుకు మార్చాం',
     });
   };
   const handleNotificationsToggle = () => {
@@ -91,6 +93,8 @@ export default function Settings() {
                     ? 'English'
                     : settings.language === 'hindi'
                     ? 'हिन्दी (Hindi)'
+                    : settings.language === 'tamil'
+                    ? 'தமிழ் (Tamil)'
                     : 'తెలుగు (Telugu)'}
                 </p>
                 <p className="text-sm text-muted-foreground">{t('settings.languageDescription')}</p>
@@ -100,9 +104,10 @@ export default function Settings() {
                 value={settings.language}
                 onChange={(e) => handleLanguageChange(e.target.value)}
               >
-                <option value="english">English</option>
-                <option value="hindi">हिन्दी (Hindi)</option>
                 <option value="telugu">తెలుగు (Telugu)</option>
+                <option value="tamil">தமிழ் (Tamil)</option>
+                <option value="hindi">हिन्दी (Hindi)</option>
+                <option value="english">English</option>
               </select>
             </div>
             <p className="text-sm text-muted-foreground mt-3 px-1">
