@@ -18,6 +18,8 @@ import Issues from "./pages/Issues";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ChangePassword from "./pages/ChangePassword";
+import RequestStatus from "./pages/RequestStatus";
 
 const queryClient = new QueryClient();
 
@@ -34,7 +36,18 @@ const AppRoutes = () => {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/request-status" element={<RequestStatus />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
+  // Mandatory password change if required
+  if (user.requiresPasswordChange) {
+    return (
+      <Routes>
+        <Route path="/change-password" element={<ChangePassword />} />
+        <Route path="*" element={<Navigate to="/change-password" replace />} />
       </Routes>
     );
   }
@@ -43,13 +56,15 @@ const AppRoutes = () => {
     return <LocationGateMobile />;
   }
 
-  // Worker: focused experience with only Issues + Settings
+  // Worker: focused experience with Issues, Alerts, and Settings
   if (user.role === 'worker') {
     return (
       <Routes>
         <Route path="/" element={<Issues />} />
         <Route path="/issues" element={<Issues />} />
+        <Route path="/alerts" element={<Alerts />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/change-password" element={<ChangePassword />} />
         <Route path="*" element={<Navigate to="/issues" replace />} />
       </Routes>
     );
@@ -64,6 +79,7 @@ const AppRoutes = () => {
       <Route path="/alerts" element={<Alerts />} />
       <Route path="/complaint" element={<Complaint />} />
       <Route path="/settings" element={<Settings />} />
+      <Route path="/change-password" element={<ChangePassword />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>

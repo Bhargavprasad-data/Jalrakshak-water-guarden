@@ -368,24 +368,55 @@ async function getDashboardData(options = {}) {
   }
 }
 
+// Helper: Haversine distance calculation (same as dashboard)
+function getDistanceMeters(lat1, lon1, lat2, lon2) {
+  const toRadians = (value) => (value * Math.PI) / 180;
+  const R = 6371000; // Earth radius in meters
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 async function findNearestVillageId(lat, lon) {
   try {
     if (lat === null || lat === undefined || lon === null || lon === undefined) {
       return null;
     }
 
+    // Fetch all villages and calculate distance using Haversine (same as dashboard)
+    // This ensures mobile app and dashboard use identical location validation
     const result = await db.query(
       `
         SELECT id, gps_lat, gps_lon
         FROM villages
         WHERE gps_lat IS NOT NULL AND gps_lon IS NOT NULL
-        ORDER BY (gps_lat - $1)^2 + (gps_lon - $2)^2 ASC
-        LIMIT 1
       `,
-      [lat, lon],
     );
 
-    return result.rows[0]?.id || null;
+    if (!result.rows || result.rows.length === 0) {
+      return null;
+    }
+
+    let closest = null;
+    let bestDistance = Infinity;
+
+    result.rows.forEach((village) => {
+      const villageLat = parseFloat(village.gps_lat);
+      const villageLon = parseFloat(village.gps_lon);
+      if (isNaN(villageLat) || isNaN(villageLon)) return;
+
+      const distance = getDistanceMeters(lat, lon, villageLat, villageLon);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        closest = village.id;
+      }
+    });
+
+    return closest;
   } catch (error) {
     logger.error('Failed to find nearest village for complaint:', error);
     return null;

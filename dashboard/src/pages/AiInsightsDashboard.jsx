@@ -563,7 +563,7 @@ export default function AiInsightsDashboard() {
             Live AI-powered insights for leaks, pumps, water quality and pressure
           </p>
         </div>
-        <div className="status-bar" style={{marginLeft:'720px'}}>
+        <div className="status-bar" style={{marginLeft:'700px'}}>
           <div className="status-indicator-wrapper">
             <div 
               className={`led-indicator ${
@@ -578,7 +578,7 @@ export default function AiInsightsDashboard() {
                 ? 'Offline'
                 : 'Checking...'}
             </span>
-            <span className="status-text" style={{ marginLeft: '20px' }}>
+            <span className="status-text" style={{ marginLeft: '30px' }}>
               Last sync: {lastSyncSeconds} sec ago
             </span>
           </div>

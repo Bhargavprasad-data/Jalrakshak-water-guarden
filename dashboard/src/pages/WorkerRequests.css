@@ -1,0 +1,77 @@
+.worker-requests-page {
+  padding: 1.5rem;
+}
+
+.status-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.status-card {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  border-left: 4px solid;
+}
+
+.status-card.pending {
+  border-left-color: #facc15;
+}
+
+.status-card.approved {
+  border-left-color: #10b981;
+}
+
+.status-card.rejected {
+  border-left-color: #ef4444;
+}
+
+.status-number {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.status-card.pending .status-number {
+  color: #facc15;
+}
+
+.status-card.approved .status-number {
+  color: #10b981;
+}
+
+.status-card.rejected .status-number {
+  color: #ef4444;
+}
+
+.status-label {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.badge-pending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.badge-approved {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.badge-rejected {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+
+

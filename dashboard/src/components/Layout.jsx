@@ -1,12 +1,26 @@
 import React from 'react'
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import logo from '../assets/logo.jpg'
 import './Layout.css'
 
 export default function Layout() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const auth = useAuth()
+  
+  if (!auth) {
+    return <div className="loading">Loading...</div>
+  }
+
+  const { user, logout } = auth
 
   const isActive = (path) => location.pathname === path
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
 
   return (
     <div className="layout">
@@ -64,6 +78,19 @@ export default function Layout() {
             >
               🤖 AI Insights
             </Link>
+          </li>
+          <li>
+            <Link
+              to="/water-supply-timings"
+              className={isActive('/water-supply-timings') ? 'active' : ''}
+            >
+              💧 Water Supply Timings
+            </Link>
+          </li>
+          <li>
+            <button onClick={handleLogout} className="logout-btn" style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#fff', padding: '10px 15px', cursor: 'pointer', fontSize: '1rem' }}>
+              🚪 Logout
+            </button>
           </li>
         </ul>
       </nav>

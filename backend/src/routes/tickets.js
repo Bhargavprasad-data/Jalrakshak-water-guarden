@@ -10,15 +10,73 @@ const router = express.Router();
 // Get tickets (public access)
 router.get('/', async (req, res) => {
   try {
+    const { village_id, district, mandal } = req.query;
+    
+    // If district or mandal is provided, get village IDs first
+    let targetVillageId = village_id;
+    if (!targetVillageId && (district || mandal)) {
+      const db = require('../db/connection');
+      let villageQuery = 'SELECT id FROM villages WHERE 1=1';
+      const villageParams = [];
+      let paramCount = 1;
+      
+      if (district) {
+        villageQuery += ` AND district = $${paramCount}`;
+        villageParams.push(district);
+        paramCount++;
+      }
+      
+      if (mandal) {
+        villageQuery += ` AND mandal = $${paramCount}`;
+        villageParams.push(mandal);
+        paramCount++;
+      }
+      
+      const villageResult = await db.query(villageQuery, villageParams);
+      if (villageResult.rows.length === 0) {
+        return res.json([]);
+      }
+      targetVillageId = null; // Will filter client-side
+    }
+    
     const filters = {
-      village_id: req.query.village_id,
+      village_id: targetVillageId,
       status: req.query.status,
       assigned_to: req.query.assigned_to,
       limit: parseInt(req.query.limit) || 100
     };
 
     logger.info('Fetching tickets with filters:', filters);
-    const tickets = await ticketService.getTickets(filters);
+    let tickets = await ticketService.getTickets(filters);
+    
+    // Client-side filtering by district/mandal if needed
+    if ((district || mandal) && !village_id) {
+      const db = require('../db/connection');
+      let villageQuery = 'SELECT id FROM villages WHERE 1=1';
+      const villageParams = [];
+      let paramCount = 1;
+      
+      if (district) {
+        villageQuery += ` AND district = $${paramCount}`;
+        villageParams.push(district);
+        paramCount++;
+      }
+      
+      if (mandal) {
+        villageQuery += ` AND mandal = $${paramCount}`;
+        villageParams.push(mandal);
+        paramCount++;
+      }
+      
+      const villageResult = await db.query(villageQuery, villageParams);
+      const villageIds = villageResult.rows.map(v => v.id);
+      
+      tickets = tickets.filter(t => {
+        const tVillageId = t.village_id || t.villageId;
+        return villageIds.some(vid => String(tVillageId) === String(vid));
+      });
+    }
+    
     logger.info(`Returning ${tickets.length} tickets`);
     res.json(tickets);
   } catch (error) {

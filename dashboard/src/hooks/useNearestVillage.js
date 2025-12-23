@@ -74,30 +74,48 @@ export default function useNearestVillage() {
     setLocationStatus('pending')
     setLocationError(null)
 
+    // Request current location with high accuracy
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setUserLocation({
+        const newLocation = {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
-        })
+        }
+        setUserLocation(newLocation)
         setLocationStatus('granted')
+        console.log('Location updated:', newLocation)
       },
       (err) => {
         setLocationStatus('denied')
         setLocationError(err.message || 'Location permission denied.')
+        console.error('Location error:', err)
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 30000,
+        timeout: 15000,
+        maximumAge: 0, // Always get fresh location
       },
     )
   }, [])
 
+  // Request location on mount
   useEffect(() => {
     requestLocation()
   }, [requestLocation])
 
+  // Refresh location periodically (every 5 minutes) to ensure we have current location
+  useEffect(() => {
+    if (locationStatus !== 'granted') return
+    
+    const locationRefreshInterval = setInterval(() => {
+      console.log('Refreshing location...')
+      requestLocation()
+    }, 5 * 60 * 1000) // Refresh every 5 minutes
+
+    return () => clearInterval(locationRefreshInterval)
+  }, [locationStatus, requestLocation])
+
+  // Resolve nearest village when location is available
   useEffect(() => {
     if (locationStatus !== 'granted' || !userLocation) return
     resolveNearestVillage(userLocation)

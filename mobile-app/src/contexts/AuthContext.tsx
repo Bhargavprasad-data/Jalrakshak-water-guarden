@@ -9,6 +9,8 @@ interface AuthUser {
   email: string | null;
   phone: string;
   role: string;
+  assigned_villages?: string[];
+  requiresPasswordChange?: boolean;
 }
 
 interface AuthContextType {
@@ -25,6 +27,7 @@ interface AuthContextType {
     villageName?: string;
   }) => Promise<void>;
   logout: () => void;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -74,7 +77,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error(body.error || 'Login failed');
     }
     const data = await res.json();
-    persistAuth(data.token, data.user);
+    // Store assigned_villages and requiresPasswordChange from login response
+    persistAuth(data.token, {
+      ...data.user,
+      assigned_villages: data.user.assigned_villages || [],
+      requiresPasswordChange: data.user.requiresPasswordChange || false
+    });
   };
 
   const signup = async (payload: {
@@ -83,7 +91,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     phone: string;
     password: string;
     role?: string;
-    villageName?: string;
+    name?: string;
+    district?: string;
+    mandal?: string;
+    village_id?: string;
   }) => {
     const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
       method: 'POST',
@@ -94,8 +105,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.error || 'Signup failed');
     }
+    const body = await res.json();
+    
+    // If worker registration requires approval, return without logging in
+    if (body.requiresApproval) {
+      return { requiresApproval: true, request: body.request };
+    }
+    
     // After successful signup, log the user in
     await login(payload.username || payload.phone, payload.password);
+    return { requiresApproval: false };
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+    
+    const res = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || 'Failed to change password');
+    }
+    
+    // Update user to remove requiresPasswordChange flag
+    if (user) {
+      const updatedUser = { ...user, requiresPasswordChange: false };
+      persistAuth(token, updatedUser);
+    }
   };
 
   const logout = () => {
@@ -118,6 +163,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         login,
         signup,
         logout,
+        changePassword,
       }}
     >
       {children}

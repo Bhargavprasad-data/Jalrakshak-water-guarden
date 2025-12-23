@@ -36,19 +36,50 @@ router.post('/register', authenticateToken, authorizeRole('admin', 'supervisor')
 // Get all devices (public access)
 router.get('/', async (req, res) => {
   try {
-    const { village_id } = req.query;
-    let query = 'SELECT * FROM devices WHERE 1=1';
+    const { village_id, district, mandal } = req.query;
+    
+    let query = 'SELECT d.*, v.district, v.mandal FROM devices d LEFT JOIN villages v ON d.village_id = v.id WHERE 1=1';
     const params = [];
+    let paramCount = 1;
 
     if (village_id) {
-      query += ' AND village_id = $1';
+      query += ` AND d.village_id = $${paramCount}`;
       params.push(village_id);
+      paramCount++;
+    } else if (district || mandal) {
+      // Filter by district/mandal through villages
+      let villageSubquery = 'SELECT id FROM villages WHERE 1=1';
+      const villageParams = [];
+      let villageParamCount = 1;
+      
+      if (district) {
+        villageSubquery += ` AND district = $${villageParamCount}`;
+        villageParams.push(district);
+        villageParamCount++;
+      }
+      
+      if (mandal) {
+        villageSubquery += ` AND mandal = $${villageParamCount}`;
+        villageParams.push(mandal);
+        villageParamCount++;
+      }
+      
+      query += ` AND d.village_id IN (${villageSubquery})`;
+      params.push(...villageParams);
+      paramCount += villageParams.length;
     }
 
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY d.created_at DESC';
 
     const result = await db.query(query, params);
-    res.json(result.rows);
+    
+    // Remove district/mandal from device objects (they're from join)
+    const devices = result.rows.map(row => {
+      const { district, mandal, ...device } = row;
+      return device;
+    });
+    
+    res.json(devices);
   } catch (error) {
     logger.error('Get devices error:', error);
     res.status(500).json({ error: 'Failed to get devices' });

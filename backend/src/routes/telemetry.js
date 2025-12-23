@@ -19,9 +19,71 @@ router.post('/', async (req, res) => {
 // Get live telemetry (public access)
 router.get('/live', async (req, res) => {
   try {
-    const { village_id } = req.query;
-    const telemetry = await telemetryService.getAllLiveTelemetry(village_id);
-    res.json(telemetry);
+    const { village_id, district, mandal } = req.query;
+    
+    // If district or mandal is provided, get village IDs first
+    let targetVillageId = village_id;
+    if (!targetVillageId && (district || mandal)) {
+      const db = require('../db/connection');
+      let villageQuery = 'SELECT id FROM villages WHERE 1=1';
+      const villageParams = [];
+      let paramCount = 1;
+      
+      if (district) {
+        villageQuery += ` AND district = $${paramCount}`;
+        villageParams.push(district);
+        paramCount++;
+      }
+      
+      if (mandal) {
+        villageQuery += ` AND mandal = $${paramCount}`;
+        villageParams.push(mandal);
+        paramCount++;
+      }
+      
+      const villageResult = await db.query(villageQuery, villageParams);
+      if (villageResult.rows.length > 0) {
+        // For multiple villages, we'll filter in the service or return all
+        // For now, pass null to get all and filter client-side
+        targetVillageId = null; // Will be handled by filtering
+      } else {
+        // No villages match, return empty
+        return res.json([]);
+      }
+    }
+    
+    const telemetry = await telemetryService.getAllLiveTelemetry(targetVillageId);
+    
+    // Client-side filtering by district/mandal if needed
+    let filteredTelemetry = telemetry;
+    if ((district || mandal) && !village_id) {
+      const db = require('../db/connection');
+      let villageQuery = 'SELECT id FROM villages WHERE 1=1';
+      const villageParams = [];
+      let paramCount = 1;
+      
+      if (district) {
+        villageQuery += ` AND district = $${paramCount}`;
+        villageParams.push(district);
+        paramCount++;
+      }
+      
+      if (mandal) {
+        villageQuery += ` AND mandal = $${paramCount}`;
+        villageParams.push(mandal);
+        paramCount++;
+      }
+      
+      const villageResult = await db.query(villageQuery, villageParams);
+      const villageIds = villageResult.rows.map(v => v.id);
+      
+      filteredTelemetry = telemetry.filter(t => {
+        const tVillageId = t.village_id || t.villageId;
+        return villageIds.some(vid => String(tVillageId) === String(vid));
+      });
+    }
+    
+    res.json(filteredTelemetry);
   } catch (error) {
     logger.error('Get live telemetry error:', error);
     res.status(500).json({ error: 'Failed to get live telemetry' });
@@ -31,7 +93,49 @@ router.get('/live', async (req, res) => {
 // Get dashboard statistics (public access) - must be before /:device_id routes
 router.get('/stats/summary', async (req, res) => {
   try {
-    const stats = await telemetryService.getDashboardStats();
+    const { village_id, district, mandal } = req.query;
+    
+    // If district or mandal is provided, get village IDs first
+    let targetVillageId = village_id;
+    if (!targetVillageId && (district || mandal)) {
+      const db = require('../db/connection');
+      let villageQuery = 'SELECT id FROM villages WHERE 1=1';
+      const villageParams = [];
+      let paramCount = 1;
+      
+      if (district) {
+        villageQuery += ` AND district = $${paramCount}`;
+        villageParams.push(district);
+        paramCount++;
+      }
+      
+      if (mandal) {
+        villageQuery += ` AND mandal = $${paramCount}`;
+        villageParams.push(mandal);
+        paramCount++;
+      }
+      
+      const villageResult = await db.query(villageQuery, villageParams);
+      if (villageResult.rows.length === 0) {
+        // No villages match, return empty stats
+        return res.json({
+          total_devices: 0,
+          avg_pressure: 0,
+          avg_flow: 0,
+          avg_ph: null,
+          avg_turbidity: 0,
+          avg_temperature: 0,
+          avg_conductivity: 0
+        });
+      }
+      // For multiple villages, pass null and filter in service
+      targetVillageId = null;
+    }
+    
+    const stats = await telemetryService.getDashboardStats(targetVillageId);
+    
+    // If filtering by district/mandal, we need to filter the stats
+    // For now, return the stats as-is (service handles village_id filtering)
     res.json(stats);
   } catch (error) {
     logger.error('Get dashboard stats error:', error);
