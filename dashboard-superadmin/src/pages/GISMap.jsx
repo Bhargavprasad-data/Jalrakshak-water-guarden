@@ -56,7 +56,7 @@ export default function GISMap() {
   const fetchVillages = useCallback(async () => {
     // Don't fetch all villages when 'all' is selected - too slow
     if (selectedDistrict === 'all') {
-      setVillages([])
+        setVillages([])
       setFilteredVillages([])
       return
     }
@@ -170,8 +170,8 @@ export default function GISMap() {
       prevDistrictRef.current = selectedDistrict
     } else {
       setFilteredMandals([])
-      setSelectedMandal('all')
-      setSelectedVillage('all')
+    setSelectedMandal('all')
+    setSelectedVillage('all')
       prevDistrictRef.current = selectedDistrict
     }
   }, [selectedDistrict])
@@ -513,54 +513,54 @@ export default function GISMap() {
               </select>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', minWidth: '200px' }}>
-              <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#666' }}>Filter by Mandal</label>
-              <select 
-                value={selectedMandal} 
-                onChange={(e) => {
+                <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#666' }}>Filter by Mandal</label>
+                <select 
+                  value={selectedMandal} 
+                  onChange={(e) => {
                   const newMandal = e.target.value
                   setSelectedMandal(newMandal)
-                  setSelectedVillage('all')
-                }}
+                    setSelectedVillage('all')
+                  }}
                 disabled={selectedDistrict === 'all' || filteredMandals.length === 0}
-                style={{ 
-                  padding: '0.5rem', 
-                  borderRadius: '8px', 
-                  border: '1px solid #ccc', 
-                  minWidth: '200px',
-                  fontWeight: selectedMandal !== 'all' ? '600' : '400',
+                  style={{ 
+                    padding: '0.5rem', 
+                    borderRadius: '8px', 
+                    border: '1px solid #ccc', 
+                    minWidth: '200px',
+                    fontWeight: selectedMandal !== 'all' ? '600' : '400',
                   backgroundColor: selectedDistrict === 'all' || filteredMandals.length === 0 ? '#f3f4f6' : (selectedMandal !== 'all' ? '#f0f9ff' : 'white'),
                   cursor: (selectedDistrict === 'all' || filteredMandals.length === 0) ? 'not-allowed' : 'pointer',
                   opacity: (selectedDistrict === 'all' || filteredMandals.length === 0) ? 0.6 : 1
-                }}
-              >
-                <option value="all">All Mandals</option>
+                  }}
+                >
+                  <option value="all">All Mandals</option>
                 {filteredMandals.map(m => {
                   const mandalValue = String(m).trim()
                   return <option key={mandalValue} value={mandalValue}>{mandalValue}</option>
                 })}
-              </select>
-            </div>
+                </select>
+              </div>
             <div style={{ display: 'flex', flexDirection: 'column', minWidth: '200px' }}>
-              <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#666' }}>Filter by Village</label>
-              <select 
-                value={selectedVillage} 
+                <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#666' }}>Filter by Village</label>
+                <select 
+                  value={selectedVillage} 
                 onChange={(e) => {
                   const newVillage = e.target.value
                   setSelectedVillage(newVillage)
                 }}
                 disabled={selectedDistrict === 'all' || filteredVillages.length === 0}
-                style={{ 
-                  padding: '0.5rem', 
-                  borderRadius: '8px', 
-                  border: '1px solid #ccc', 
-                  minWidth: '200px',
-                  fontWeight: selectedVillage !== 'all' ? '600' : '400',
+                  style={{ 
+                    padding: '0.5rem', 
+                    borderRadius: '8px', 
+                    border: '1px solid #ccc', 
+                    minWidth: '200px',
+                    fontWeight: selectedVillage !== 'all' ? '600' : '400',
                   backgroundColor: selectedDistrict === 'all' || filteredVillages.length === 0 ? '#f3f4f6' : (selectedVillage !== 'all' ? '#f0f9ff' : 'white'),
                   cursor: (selectedDistrict === 'all' || filteredVillages.length === 0) ? 'not-allowed' : 'pointer',
                   opacity: (selectedDistrict === 'all' || filteredVillages.length === 0) ? 0.6 : 1
-                }}
-              >
-                <option value="all">All Villages</option>
+                  }}
+                >
+                  <option value="all">All Villages</option>
                 {filteredVillages.map(v => {
                   const villageId = v.id || v.name
                   const villageValue = String(villageId).trim()
@@ -570,7 +570,7 @@ export default function GISMap() {
                     </option>
                   )
                 })}
-              </select>
+                </select>
             </div>
             {(selectedDistrict !== 'Srikakulam' || selectedMandal !== 'all' || selectedVillage !== 'all') && (
               <div style={{ display: 'flex', alignItems: 'flex-end' }}>
@@ -649,26 +649,26 @@ export default function GISMap() {
               return true
             })
             .map((village) => {
-              const lat = parseNumber(village.gps_lat) || parseNumber(village.latitude) || centerLat
-              const lng = parseNumber(village.gps_lon) || parseNumber(village.longitude) || centerLng
-              
-              if (!lat || !lng || isNaN(lat) || isNaN(lng)) return null
-              
-              return (
-                <Marker
-                  key={village.id || village.name}
-                  position={[lat, lng]}
-                >
-                  <Popup>
-                    <div>
-                      <h3>{village.name}</h3>
-                      <p>District: {village.district || selectedDistrict}</p>
-                      {village.mandal && <p>Mandal: {village.mandal}</p>}
-                    </div>
-                  </Popup>
-                </Marker>
-              )
-            })}
+            const lat = parseNumber(village.gps_lat) || parseNumber(village.latitude) || centerLat
+            const lng = parseNumber(village.gps_lon) || parseNumber(village.longitude) || centerLng
+            
+            if (!lat || !lng || isNaN(lat) || isNaN(lng)) return null
+            
+            return (
+              <Marker
+                key={village.id || village.name}
+                position={[lat, lng]}
+              >
+                <Popup>
+                  <div>
+                    <h3>{village.name}</h3>
+                    <p>District: {village.district || selectedDistrict}</p>
+                    {village.mandal && <p>Mandal: {village.mandal}</p>}
+                  </div>
+                </Popup>
+              </Marker>
+            )
+          })}
 
           {pipelines
             .filter((pipeline) => {
@@ -695,25 +695,25 @@ export default function GISMap() {
               return true
             })
             .map((pipeline) => {
-              let coordinates = []
-              if (pipeline.geometry) {
-                // GeoJSON parsing would go here
-              }
-              
-              const color = pipeline.status === 'leak_detected' ? '#ef4444' : 
-                           pipeline.status === 'maintenance' ? '#facc15' : '#06b6d4'
-              
-              return coordinates.length > 0 ? (
-                <Polyline
-                  key={pipeline.id}
-                  positions={coordinates}
-                  color={color}
-                  weight={pipeline.pipeline_type === 'main_supply' ? 5 : 3}
-                  dashArray={pipeline.status === 'leak_detected' ? '10, 5' : undefined}
-                  opacity={0.7}
-                />
-              ) : null
-            })}
+            let coordinates = []
+            if (pipeline.geometry) {
+              // GeoJSON parsing would go here
+            }
+            
+            const color = pipeline.status === 'leak_detected' ? '#ef4444' : 
+                         pipeline.status === 'maintenance' ? '#facc15' : '#06b6d4'
+            
+            return coordinates.length > 0 ? (
+              <Polyline
+                key={pipeline.id}
+                positions={coordinates}
+                color={color}
+                weight={pipeline.pipeline_type === 'main_supply' ? 5 : 3}
+                dashArray={pipeline.status === 'leak_detected' ? '10, 5' : undefined}
+                opacity={0.7}
+              />
+            ) : null
+          })}
 
           {sensors
             .filter((s) => {

@@ -463,10 +463,10 @@ export default function GISMap() {
                   return <option key={mandalValue} value={mandalValue}>{mandalValue}</option>
                 })}
               </select>
-            </div>
+        </div>
             <div style={{ display: 'flex', flexDirection: 'column', minWidth: '200px' }}>
               <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#666' }}>Filter by Village</label>
-              <select 
+          <select
                 value={selectedVillage} 
                 onChange={(e) => setSelectedVillage(e.target.value)}
                 disabled={!selectedDistrict || filteredVillages.length === 0}
@@ -488,10 +488,10 @@ export default function GISMap() {
                   return (
                     <option key={villageValue} value={villageValue}>
                       {v.name}
-                    </option>
+            </option>
                   )
                 })}
-              </select>
+          </select>
             </div>
             {(selectedMandal !== 'all' || selectedVillage !== 'all') && (
               <div style={{ display: 'flex', alignItems: 'flex-end' }}>
@@ -512,7 +512,7 @@ export default function GISMap() {
                   }}
                 >
                   Clear Filters
-                </button>
+          </button>
               </div>
             )}
           </div>
@@ -537,7 +537,7 @@ export default function GISMap() {
           />
           
           <AutoRefresh interval={10000} onRefresh={fetchData} />
-          
+
           {villages
             .filter((village) => {
               if (selectedMandal && selectedMandal !== 'all') {
@@ -596,25 +596,25 @@ export default function GISMap() {
               return true
             })
             .map((pipeline) => {
-              let coordinates = []
-              if (pipeline.geometry) {
-                // GeoJSON parsing would go here
-              }
-              
-              const color = pipeline.status === 'leak_detected' ? '#ef4444' : 
-                           pipeline.status === 'maintenance' ? '#facc15' : '#06b6d4'
-              
-              return coordinates.length > 0 ? (
-                <Polyline
-                  key={pipeline.id}
-                  positions={coordinates}
-                  color={color}
-                  weight={pipeline.pipeline_type === 'main_supply' ? 5 : 3}
-                  dashArray={pipeline.status === 'leak_detected' ? '10, 5' : undefined}
-                  opacity={0.7}
-                />
-              ) : null
-            })}
+            let coordinates = []
+            if (pipeline.geometry) {
+              // GeoJSON parsing would go here
+            }
+            
+            const color = pipeline.status === 'leak_detected' ? '#ef4444' : 
+                         pipeline.status === 'maintenance' ? '#facc15' : '#06b6d4'
+            
+            return coordinates.length > 0 ? (
+              <Polyline
+                key={pipeline.id}
+                positions={coordinates}
+                color={color}
+                weight={pipeline.pipeline_type === 'main_supply' ? 5 : 3}
+                dashArray={pipeline.status === 'leak_detected' ? '10, 5' : undefined}
+                opacity={0.7}
+              />
+            ) : null
+          })}
 
           {sensors
             .filter((s) => {

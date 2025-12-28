@@ -108,7 +108,7 @@ export default function Dashboard() {
         console.log('[Super-Admin Dashboard] Raw mandals API response:', allMandalsRaw)
         
         if (Array.isArray(allMandalsRaw) && allMandalsRaw.length > 0) {
-          allMandalsRaw.forEach(m => {
+        allMandalsRaw.forEach(m => {
             // Backend returns: {mandal: "name", village_count: number}
             const mandalName = m.mandal || m.name || m
             
@@ -121,8 +121,8 @@ export default function Dashboard() {
             
             if (mandalName && String(mandalName).trim() !== '') {
               allMandalsSet.add(String(mandalName).trim())
-            }
-          })
+          }
+        })
           console.log('[Super-Admin Dashboard] Added', allMandalsSet.size, 'mandals from filtered API call')
         } else {
           console.warn('[Super-Admin Dashboard] Mandals API call returned empty or invalid data')
@@ -285,7 +285,7 @@ export default function Dashboard() {
       if (selectedVillage && selectedVillage !== 'all') {
         filterParams.village_id = selectedVillage
       }
-      
+
       const [alertsRes, ticketsRes, telemetryRes] = await Promise.allSettled([
         axios.get('/api/alerts', { params: { ...filterParams, acknowledged: false } }).catch(err => ({ data: [] })),
         axios.get('/api/tickets', { params: { ...filterParams, status: 'open' } }).catch(err => ({ data: [] })),
@@ -335,8 +335,8 @@ export default function Dashboard() {
       }
       
       // 2. From districtDataToUse (after all district fetches complete) - apply filters
-      districtsToUse.forEach(district => {
-        const data = districtDataToUse[district]
+        districtsToUse.forEach(district => {
+          const data = districtDataToUse[district]
         if (data) {
           // From mandals array - apply mandal filter if set
           if (data.mandals && Array.isArray(data.mandals)) {
@@ -483,7 +483,7 @@ export default function Dashboard() {
       console.log('[Super-Admin Dashboard] finalMandalsCount (will be used):', finalMandalsCount)
       console.log('[Super-Admin Dashboard] totalDevices:', totalDevices)
       console.log('[Super-Admin Dashboard] ============================')
-      
+
       setOverallStats({
         totalDistricts: districtsToUse.length,
         totalMandals: finalMandalsCount, // Use Set size as source of truth to prevent mix-ups
@@ -660,9 +660,6 @@ export default function Dashboard() {
           <div className="led-indicator led-green"></div>
           <span className="status-text">Last Sync: {lastSyncSeconds} sec ago</span>
         </div>
-        <button onClick={refreshData} style={{ marginLeft: '1rem', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid #ccc' }}>
-          Refresh Data
-        </button>
       </div>
 
       {/* Page Header */}

@@ -41,16 +41,32 @@ export default function Alerts() {
     village: '',
   });
   const [nearestVillage, setNearestVillage] = useState<{ id: string; name: string } | null>(null);
-  // Find nearest village (same as dashboard and Issues page)
+  // Auto-select K. Kotturu on mount, then update when location changes
   useEffect(() => {
-    if (locationStatus === 'granted' && coords) {
-      async function findNearestVillage() {
-        try {
-          const villagesRes = await fetch(`${API_BASE_URL}/api/gis/villages`);
-          if (!villagesRes.ok) return;
-          const villages = await villagesRes.json();
-          if (!Array.isArray(villages) || villages.length === 0) return;
+    async function autoSelectKotturu() {
+      try {
+        const villagesRes = await fetch(`${API_BASE_URL}/api/gis/villages`);
+        if (!villagesRes.ok) return;
+        const villages = await villagesRes.json();
+        if (!Array.isArray(villages) || villages.length === 0) return;
 
+        // First, try to find K. Kotturu village (auto-select if available)
+        const kotturuVillage = villages.find((v: any) => {
+          const name = String(v.name || '').toLowerCase();
+          return name.includes('kotturu') || name.includes('k. kotturu') || name === 'k kotturu';
+        });
+
+        if (kotturuVillage && kotturuVillage.id && !nearestVillage) {
+          console.log('Auto-selecting K. Kotturu village:', kotturuVillage.name);
+          setNearestVillage({ id: kotturuVillage.id, name: kotturuVillage.name || 'K. Kotturu' });
+          if (!filters.village) {
+            setFilters(prev => ({ ...prev, village: kotturuVillage.id }));
+          }
+          return; // Don't override with GPS if K. Kotturu is found
+        }
+
+        // If K. Kotturu not found and location is granted, use GPS-based selection
+        if (locationStatus === 'granted' && coords && !nearestVillage) {
           const toRadians = (value: number) => (value * Math.PI) / 180;
           const getDistanceMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
             const R = 6371000;
@@ -85,13 +101,14 @@ export default function Alerts() {
               setFilters(prev => ({ ...prev, village: closest.id }));
             }
           }
-        } catch (error) {
-          console.error('Failed to find nearest village:', error);
         }
+      } catch (error) {
+        console.error('Failed to find nearest village:', error);
       }
-      findNearestVillage();
     }
-  }, [locationStatus, coords]);
+    
+    autoSelectKotturu();
+  }, [locationStatus, coords, nearestVillage, filters.village]);
 
   // Fetch alerts (same as dashboard)
   useEffect(() => {

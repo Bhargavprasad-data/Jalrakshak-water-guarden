@@ -52,17 +52,17 @@ export function AuthProvider({ children }) {
       return { success: false, error: 'Invalid response from server' }
     } catch (error) {
       // Fallback to hardcoded credentials for backward compatibility
-      if (username === 'gurla' && password === 'gurla') {
-        const userData = {
-          username: 'gurla',
-          role: 'mandaladmin',
-          dashboard: 'mandal',
-          mandal: 'Gurla'
-        }
-        localStorage.setItem('mandal_user', JSON.stringify(userData))
-        setUser(userData)
-        return { success: true }
+    if (username === 'gurla' && password === 'gurla') {
+      const userData = {
+        username: 'gurla',
+        role: 'mandaladmin',
+        dashboard: 'mandal',
+        mandal: 'Gurla'
       }
+      localStorage.setItem('mandal_user', JSON.stringify(userData))
+      setUser(userData)
+      return { success: true }
+    }
       return { success: false, error: error.response?.data?.error || 'Invalid username or password' }
     }
   }

@@ -174,30 +174,30 @@ export default function Complaints() {
                 </div>
 
                 <div className="card-meta">
-                  <p className="meta">
-                    {complaint.village_name || 'Unknown village'} • {formatTimestamp(complaint.created_at)}
-                  </p>
-                  {(complaint.reported_by_name || complaint.reported_by_email) && (
-                    <p className="meta reporter">
-                      {complaint.reported_by_name || 'Anonymous'}
-                      {complaint.reported_by_email ? ` • ${complaint.reported_by_email}` : ''}
-                    </p>
-                  )}
+                      <p className="meta">
+                        {complaint.village_name || 'Unknown village'} • {formatTimestamp(complaint.created_at)}
+                      </p>
+                      {(complaint.reported_by_name || complaint.reported_by_email) && (
+                        <p className="meta reporter">
+                          {complaint.reported_by_name || 'Anonymous'}
+                          {complaint.reported_by_email ? ` • ${complaint.reported_by_email}` : ''}
+                        </p>
+                      )}
                 </div>
 
                 <p className="description">{complaint.description || 'No description provided.'}</p>
 
                 {photos.length > 0 && (
                   <div className="evidence-section">
-                    <a
+                      <a
                       href={photos[0]}
-                      target="_blank"
-                      rel="noreferrer"
+                        target="_blank"
+                        rel="noreferrer"
                       className="evidence-link"
-                    >
+                      >
                       <span className="evidence-icon">📄</span>
                       Complaint evidence
-                    </a>
+                      </a>
                     <button
                       type="button"
                       className="btn-view"

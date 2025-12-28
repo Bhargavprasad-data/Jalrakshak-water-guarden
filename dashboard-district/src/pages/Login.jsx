@@ -32,16 +32,16 @@ export default function Login() {
 
         await login(username, password)
 
-        toast.success('Login successful!')
-        navigate('/')
-      } else {
+      toast.success('Login successful!')
+      navigate('/')
+    } else {
         toast.error('Invalid response from server')
       }
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Login failed. Please check your credentials.'
       toast.error(errorMessage)
     } finally {
-      setLoading(false)
+    setLoading(false)
     }
   }
 

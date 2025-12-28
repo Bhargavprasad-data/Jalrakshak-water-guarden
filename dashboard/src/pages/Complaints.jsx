@@ -112,7 +112,10 @@ export default function Complaints() {
     <div className="complaints-page">
       <div className="page-header">
         <div>
-          <h1>📮 Community Complaints</h1>
+          <h1>
+            <span className="header-icon">💧</span>
+            Community Complaints
+          </h1>
           <p className="subtitle">Live feed of issues submitted from the JalRakshak mobile app</p>
         </div>
       </div>
@@ -132,9 +135,7 @@ export default function Complaints() {
             </button>
           ))}
         </div>
-        <button className="btn btn-primary" onClick={fetchComplaints}>
-          🔄 Refresh
-        </button>
+        
       </div>
 
       {loading ? (
@@ -158,42 +159,35 @@ export default function Complaints() {
             return (
               <div key={complaint.id || complaint.complaint_id} className="complaint-card">
                 <div className="card-header">
-                  <div className="title">
-                    <span className="icon">{icon}</span>
-                    <div>
-                          <h3>{(complaint.complaint_type || 'Other').replace(/_/g, ' ')}</h3>
-                      <p className="meta">
-                        {complaint.village_name || 'Unknown village'} • {formatTimestamp(complaint.created_at)}
-                      </p>
-                      {(complaint.reported_by_name || complaint.reported_by_email) && (
-                        <p className="meta reporter">
-                          {complaint.reported_by_name || 'Anonymous'}
-                          {complaint.reported_by_email ? ` • ${complaint.reported_by_email}` : ''}
-                        </p>
-                      )}
-                    </div>
+                  <div className="complaint-type-section">
+                    <span className="type-icon">{icon}</span>
+                    <span className="type-text">{(complaint.complaint_type || 'Other').replace(/_/g, ' ')}</span>
                   </div>
-                  <span className={badge}>{statusLabels[complaint.status] || complaint.status}</span>
+                  <span className={`status-badge ${badge}`}>{statusLabels[complaint.status] || complaint.status}</span>
+                </div>
+
+                <div className="reporter-info">
+                  <div className="reporter-item">{complaint.village_name || 'Unknown location'}</div>
+                  <div className="reporter-item">{formatTimestamp(complaint.created_at)}</div>
+                  {complaint.reported_by_name && (
+                    <div className="reporter-item">{complaint.reported_by_name}</div>
+                  )}
+                  {complaint.reported_by_email && (
+                    <div className="reporter-item">{complaint.reported_by_email}</div>
+                  )}
                 </div>
 
                 <p className="description">{complaint.description || 'No description provided.'}</p>
 
                 {photos.length > 0 && (
-                  <div className="photos-row">
-                    {photos.map((photo, index) => (
-                      <a
-                        key={photo}
-                        href={photo}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="photo-thumb"
-                      >
-                        <img src={photo} alt={`Complaint evidence ${index + 1}`} />
-                      </a>
-                    ))}
+                  <div className="evidence-section">
+                    <span className="evidence-label">
+                      <span className="evidence-icon">📄</span>
+                      Complaint evidence
+                    </span>
                     <button
                       type="button"
-                      className="btn btn-sm btn-secondary"
+                      className="btn-view-evidence"
                       onClick={() => window.open(photos[0], '_blank', 'noopener,noreferrer')}
                     >
                       View
@@ -201,33 +195,33 @@ export default function Complaints() {
                   </div>
                 )}
 
-                <div className="details-row">
-                  <div>
-                    <span className="label">Complaint ID</span>
-                    <strong>{complaint.complaint_id}</strong>
+                <div className="details-section">
+                  <div className="detail-item detail-left">
+                    <span className="detail-label">Complaint ID</span>
+                    <span className="detail-value">{complaint.complaint_id}</span>
                   </div>
-                  <div>
-                    <span className="label">Location</span>
-                    <strong>
+                  <div className="detail-item detail-right">
+                    <span className="detail-label">Location</span>
+                    <span className="detail-value">
                       {complaint.village_name
                         ? complaint.village_name
                         : complaint.gps_lat && complaint.gps_lon
                         ? `${Number(complaint.gps_lat).toFixed(3)}, ${Number(complaint.gps_lon).toFixed(3)}`
                         : 'N/A'}
-                    </strong>
+                    </span>
                   </div>
                 </div>
 
                 <div className="actions-row">
                   <button
-                    className="btn btn-sm btn-danger"
+                    className="btn-delete"
                     onClick={() => deleteComplaint(complaint)}
                   >
                     Delete
                   </button>
                   {action && (
                     <button
-                      className="btn btn-sm btn-primary"
+                      className="btn-accept"
                       onClick={() => updateStatus(complaint, action.next)}
                     >
                       {action.label}

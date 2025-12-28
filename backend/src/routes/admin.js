@@ -171,7 +171,7 @@ router.get('/mandals', async (req, res) => {
       SELECT DISTINCT 
         TRIM(mandal) as mandal,
         COUNT(*)::INTEGER as village_count
-      FROM villages
+      FROM villages 
       WHERE mandal IS NOT NULL AND TRIM(mandal) != ''
     `;
     if (district) {
@@ -195,9 +195,9 @@ router.get('/mandals', async (req, res) => {
       `;
       if (district) {
         query2 += ` AND LOWER(TRIM(district)) = LOWER(TRIM($1))`;
-      }
+    }
       query2 += ` GROUP BY TRIM(metadata->>'mandal') ORDER BY TRIM(metadata->>'mandal')`;
-      
+
       result = await db.query(query2, params);
       logger.info(`[Mandals API] Query 2 (metadata): Found ${result.rows.length} mandals`);
     }

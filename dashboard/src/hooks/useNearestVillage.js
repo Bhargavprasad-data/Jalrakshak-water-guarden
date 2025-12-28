@@ -21,14 +21,29 @@ export default function useNearestVillage() {
   const [nearestVillage, setNearestVillage] = useState(null)
   const [villageLoading, setVillageLoading] = useState(false)
   const [villageError, setVillageError] = useState(null)
+  const [allVillages, setAllVillages] = useState([])
+  const [manualVillage, setManualVillage] = useState(null)
+
+  // Fetch all villages for manual selection
+  const fetchAllVillages = useCallback(async () => {
+    try {
+      const response = await axios.get('/api/gis/villages')
+      const villages = response.data || []
+      setAllVillages(villages)
+      return villages
+    } catch (error) {
+      console.error('Failed to fetch villages:', error)
+      setAllVillages([])
+      return []
+    }
+  }, [])
 
   const resolveNearestVillage = useCallback(async (coords) => {
     if (!coords) return
     try {
       setVillageLoading(true)
       setVillageError(null)
-      const response = await axios.get('/api/gis/villages')
-      const villages = response.data || []
+      const villages = allVillages.length > 0 ? allVillages : await fetchAllVillages()
       if (!villages.length) {
         setVillageError('No villages available to match location.')
         return
@@ -55,14 +70,17 @@ export default function useNearestVillage() {
         return
       }
 
+      // Only set if no manual village is selected
+      if (!manualVillage) {
       setNearestVillage(closest)
+      }
     } catch (error) {
       console.error('Failed to resolve nearest village:', error)
       setVillageError('Failed to fetch villages. Please try again.')
     } finally {
       setVillageLoading(false)
     }
-  }, [])
+  }, [allVillages, fetchAllVillages, manualVillage])
 
   const requestLocation = useCallback(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -115,11 +133,53 @@ export default function useNearestVillage() {
     return () => clearInterval(locationRefreshInterval)
   }, [locationStatus, requestLocation])
 
-  // Resolve nearest village when location is available
+  // Resolve nearest village when location is available (only if no manual selection)
   useEffect(() => {
+    if (manualVillage) {
+      setNearestVillage(manualVillage)
+      return
+    }
     if (locationStatus !== 'granted' || !userLocation) return
     resolveNearestVillage(userLocation)
-  }, [locationStatus, userLocation, resolveNearestVillage])
+  }, [locationStatus, userLocation, resolveNearestVillage, manualVillage])
+
+  // Function to manually select a village
+  const selectVillage = useCallback((village) => {
+    if (village) {
+      setManualVillage(village)
+      setNearestVillage(village)
+      setVillageError(null)
+      console.log('Village manually selected:', village.name)
+    } else {
+      setManualVillage(null)
+      // Re-resolve from GPS if available
+      if (userLocation) {
+        resolveNearestVillage(userLocation)
+      }
+    }
+  }, [userLocation, resolveNearestVillage])
+
+  // Load villages on mount and auto-select K. Kotturu if available
+  useEffect(() => {
+    const loadVillages = async () => {
+      const villages = await fetchAllVillages()
+      // Auto-select K. Kotturu if it exists in the list (only on initial load)
+      if (villages.length > 0 && !manualVillage && !nearestVillage) {
+        const kotturuVillage = villages.find(v => {
+          const name = String(v.name || '').toLowerCase()
+          return name.includes('kotturu') || name.includes('k. kotturu') || name === 'k kotturu'
+        })
+        if (kotturuVillage) {
+          console.log('Auto-selecting K. Kotturu village:', kotturuVillage.name)
+          setManualVillage(kotturuVillage)
+          setNearestVillage(kotturuVillage)
+          setVillageError(null)
+        }
+      }
+    }
+    loadVillages()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const retryVillageLookup = () => {
     if (userLocation) {
@@ -136,6 +196,9 @@ export default function useNearestVillage() {
     villageLoading,
     villageError,
     retryVillageLookup,
+    allVillages,
+    selectVillage,
+    manualVillage,
   }
 }
 
