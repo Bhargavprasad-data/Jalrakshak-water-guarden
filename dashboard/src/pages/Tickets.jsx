@@ -242,22 +242,6 @@ const fetchTickets = async () => {
               </button>
             ))}
           </div>
-
-          <div className="village-filter">
-            <span className="village-filter-label">Village</span>
-            <select
-              className="village-select"
-              value={selectedVillage}
-              onChange={(e) => setSelectedVillage(e.target.value)}
-            >
-              <option value="all">All Villages</option>
-              {villageOptions.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
       </div>
 

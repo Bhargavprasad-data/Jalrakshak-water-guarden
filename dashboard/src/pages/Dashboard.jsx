@@ -33,6 +33,9 @@ export default function Dashboard() {
     villageLoading,
     villageError,
     retryVillageLookup,
+    allVillages,
+    selectVillage,
+    manualVillage,
   } = useNearestVillage()
 
   const fetchData = useCallback(async () => {
@@ -338,12 +341,16 @@ export default function Dashboard() {
 
       {/* Page Header */}
       <div className="page-header">
-        <h1>Dashboard {nearestVillage ? `• ${formatVillageName(nearestVillage.name)}` : ''}</h1>
-        <p className="page-subtitle">
-          {nearestVillage
-            ? `Real-time monitoring for ${formatVillageName(nearestVillage.name)}`
-            : 'Real-time water monitoring and analytics'}
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h1>Dashboard {nearestVillage ? `• ${formatVillageName(nearestVillage.name)}` : ''}</h1>
+            <p className="page-subtitle">
+              {nearestVillage
+                ? `Real-time monitoring for ${formatVillageName(nearestVillage.name)}`
+                : 'Real-time water monitoring and analytics'}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* KPI Cards Grid */}

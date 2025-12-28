@@ -78,12 +78,12 @@ export default function Dashboard() {
 
         // Method 2: Try each district's mandals API
         try {
-          const districtsRes = await axios.get('/api/admin/districts')
-          const districtsList = (districtsRes.data || []).map(d => d.district || d)
-          
-          for (const district of districtsList) {
-            try {
-              const mandalsRes = await axios.get(`/api/admin/mandals?district=${encodeURIComponent(district)}`)
+        const districtsRes = await axios.get('/api/admin/districts')
+        const districtsList = (districtsRes.data || []).map(d => d.district || d)
+        
+        for (const district of districtsList) {
+          try {
+            const mandalsRes = await axios.get(`/api/admin/mandals?district=${encodeURIComponent(district)}`)
               const mandalsList = (mandalsRes.data || []).map(m => String(m.mandal || m).trim().toLowerCase())
               
               const userMandalLower = String(userMandal).trim().toLowerCase()
@@ -91,21 +91,21 @@ export default function Dashboard() {
                 m === userMandalLower || 
                 m.includes(userMandalLower) || 
                 userMandalLower.includes(m)
-              )
-              
+            )
+            
               if (found) {
-                setSelectedDistrict(district)
+              setSelectedDistrict(district)
                 console.log(`[Mandal Dashboard] Found district: ${district} for mandal: ${userMandal}`)
                 return
-              }
-            } catch (err) {
+            }
+          } catch (err) {
               // Continue to next district
             }
           }
         } catch (err) {
           console.error('[Mandal Dashboard] Error checking districts:', err)
         }
-
+        
         // If still not found, default to Srikakulam (most common district)
         console.warn(`[Mandal Dashboard] Could not find district for mandal: ${userMandal}, defaulting to Srikakulam`)
         setSelectedDistrict('Srikakulam')
@@ -117,7 +117,7 @@ export default function Dashboard() {
         setLoading(false)
       }
     }
-
+    
     findDistrict()
   }, [userMandal])
 
@@ -259,7 +259,7 @@ export default function Dashboard() {
           return { data: null }
         })
       ])
-      
+
       console.log('[Mandal Dashboard] API responses status:', {
         telemetry: telemetryRes.status,
         alerts: alertsRes.status,
@@ -323,22 +323,22 @@ export default function Dashboard() {
         const pressures = telemetry
           .filter(t => t.pressure != null && t.pressure !== '')
           .map(t => {
-            const val = typeof t.pressure === 'string' ? parseFloat(t.pressure) : t.pressure
-            return isNaN(val) ? 0 : val
+          const val = typeof t.pressure === 'string' ? parseFloat(t.pressure) : t.pressure
+          return isNaN(val) ? 0 : val
           })
           .filter(v => v > 0)
         const flows = telemetry
           .filter(t => t.flow_rate != null && t.flow_rate !== '')
           .map(t => {
-            const val = typeof t.flow_rate === 'string' ? parseFloat(t.flow_rate) : t.flow_rate
-            return isNaN(val) ? 0 : val
+          const val = typeof t.flow_rate === 'string' ? parseFloat(t.flow_rate) : t.flow_rate
+          return isNaN(val) ? 0 : val
           })
           .filter(v => v > 0)
         const phValues = telemetry
           .filter(t => (t.ph != null && t.ph !== '') || (t.metadata?.ph != null && t.metadata?.ph !== ''))
           .map(t => {
-            const val = parseFloat(t.ph || t.metadata?.ph || 0)
-            return isNaN(val) ? null : val
+          const val = parseFloat(t.ph || t.metadata?.ph || 0)
+          return isNaN(val) ? null : val
           })
           .filter(v => v != null)
 
@@ -378,7 +378,7 @@ export default function Dashboard() {
           const tempAvg = avgTemp.length > 0 
             ? avgTemp.reduce((a, b) => a + b, 0) / avgTemp.length 
             : null
-
+          
           if (turbidityAvg !== null && avgPH !== null && tempAvg !== null) {
             const wqi = Math.round(
               (100 - (Math.min(turbidityAvg / 50, 1) * 100)) * 0.3 +
@@ -487,7 +487,7 @@ export default function Dashboard() {
       toast.error('Failed to load dashboard data. Please check console for details.')
     } finally {
       setLoading(false)
-    }
+      }
   }, [selectedDistrict, userMandal, selectedVillage])
   
   // Auto-set district to Srikakulam if not found after a delay
@@ -518,7 +518,7 @@ export default function Dashboard() {
 
     // Initial fetch (will use default district 'Srikakulam' if selectedDistrict is empty)
     fetchDataRef.current()
-
+    
     // Set up polling interval (every 10 seconds)
     const fetchInterval = setInterval(() => {
       fetchDataRef.current()
@@ -571,7 +571,7 @@ export default function Dashboard() {
     }
 
     try {
-      const worksheetData = reportData.map((row) => ({
+    const worksheetData = reportData.map((row) => ({
         'Period Start': row.period_start ? new Date(row.period_start).toLocaleString() : 'N/A',
         'Device ID': row.device_id || 'N/A',
         'Avg Flow (L/min)': row.avg_flow || '0.00',
@@ -581,16 +581,16 @@ export default function Dashboard() {
         'Max Battery (%)': row.max_battery != null ? row.max_battery : 'N/A',
         'Min Battery (%)': row.min_battery != null ? row.min_battery : 'N/A',
         'Samples': row.samples || 0
-      }))
+    }))
 
-      const worksheet = XLSX.utils.json_to_sheet(worksheetData)
-      const workbook = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Telemetry Report')
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Telemetry Report')
       
       const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
       const filename = `jalrakshak-${reportPeriod}-report-${timestamp}.xlsx`
       
-      XLSX.writeFile(workbook, filename)
+    XLSX.writeFile(workbook, filename)
       toast.success(`Report downloaded as ${filename}`)
     } catch (error) {
       console.error('Failed to download report:', error)
@@ -674,31 +674,31 @@ export default function Dashboard() {
       {/* Page Header */}
       <div className="page-header">
         <div>
-          <h1>Mandal Dashboard</h1>
-          {villages.length > 0 && (
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <h1>Mandal Dashboard</h1>
+        {villages.length > 0 && (
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
               <div style={{ display: 'flex', flexDirection: 'column', minWidth: '200px' }}>
                 <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#666', marginBottom: '0.25rem' }}>Filter by Village</label>
-                <select 
-                  value={selectedVillage} 
-                  onChange={(e) => setSelectedVillage(e.target.value)}
-                  style={{ 
-                    padding: '0.5rem', 
-                    borderRadius: '8px', 
-                    border: '1px solid #ccc', 
-                    minWidth: '200px',
-                    fontWeight: selectedVillage !== 'all' ? '600' : '400',
-                    backgroundColor: selectedVillage !== 'all' ? '#f0f9ff' : 'white'
-                  }}
-                >
-                  <option value="all">All Villages</option>
-                  {villages.map(v => (
-                    <option key={v.id || v.name} value={v.id || v.name}>
-                      {v.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <select 
+                value={selectedVillage} 
+                onChange={(e) => setSelectedVillage(e.target.value)}
+                style={{ 
+                  padding: '0.5rem', 
+                  borderRadius: '8px', 
+                  border: '1px solid #ccc', 
+                  minWidth: '200px',
+                  fontWeight: selectedVillage !== 'all' ? '600' : '400',
+                  backgroundColor: selectedVillage !== 'all' ? '#f0f9ff' : 'white'
+                }}
+              >
+                <option value="all">All Villages</option>
+                {villages.map(v => (
+                  <option key={v.id || v.name} value={v.id || v.name}>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+            </div>
               {selectedVillage !== 'all' && (
                 <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                   <button
@@ -716,8 +716,8 @@ export default function Dashboard() {
                   >
                     Clear Filter
                   </button>
-                </div>
-              )}
+          </div>
+        )}
             </div>
           )}
         </div>
@@ -730,7 +730,7 @@ export default function Dashboard() {
       <div className="kpi-grid">
         <div className="kpi-card">
           <div className="kpi-header">
-            <h3>Total Villages</h3>
+          <h3>Total Villages</h3>
             <div className="kpi-icon" style={{ background: 'linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)' }}>
               🏘️
             </div>
@@ -758,7 +758,7 @@ export default function Dashboard() {
 
         <div className="kpi-card kpi-alert">
           <div className="kpi-header">
-            <h3>Active Alerts</h3>
+          <h3>Active Alerts</h3>
             <div className="kpi-icon" style={{ background: 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)' }}>
               🚨
             </div>
@@ -769,7 +769,7 @@ export default function Dashboard() {
 
         <div className="kpi-card kpi-warning">
           <div className="kpi-header">
-            <h3>Open Issues</h3>
+          <h3>Open Issues</h3>
             <div className="kpi-icon" style={{ background: 'linear-gradient(135deg, #facc15 0%, #fbbf24 100%)' }}>
               🎫
             </div>
@@ -780,7 +780,7 @@ export default function Dashboard() {
 
         <div className="kpi-card">
           <div className="kpi-header">
-            <h3>Avg Pressure</h3>
+          <h3>Avg Pressure</h3>
             <div className="kpi-icon" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)' }}>
               💧
             </div>
@@ -797,7 +797,7 @@ export default function Dashboard() {
 
         <div className="kpi-card">
           <div className="kpi-header">
-            <h3>Avg Flow Rate</h3>
+          <h3>Avg Flow Rate</h3>
             <div className="kpi-icon" style={{ background: 'linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%)' }}>
               🌊
             </div>
@@ -814,7 +814,7 @@ export default function Dashboard() {
 
         <div className="kpi-card">
           <div className="kpi-header">
-            <h3>Avg pH</h3>
+          <h3>Avg pH</h3>
             <div className="kpi-icon" style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)' }}>
               🧪
             </div>
@@ -825,7 +825,7 @@ export default function Dashboard() {
 
         <div className={`kpi-card kpi-water-quality ${stats.waterQuality ? `kpi-${stats.waterQuality.status}` : ''}`}>
           <div className="kpi-header">
-            <h3>Water Quality</h3>
+          <h3>Water Quality</h3>
             <div className="kpi-icon" style={{ 
               background: stats.waterQuality?.status === 'good' 
                 ? 'linear-gradient(135deg, #10b981 0%, #34d399 100%)'
@@ -868,8 +868,8 @@ export default function Dashboard() {
               }}>
                 <div style={{ fontWeight: '600', color: '#1e293b' }}>
                   {formatVillageName(village.name)}
-                </div>
-              </div>
+                    </div>
+                    </div>
             ))}
           </div>
         </div>
@@ -1013,43 +1013,43 @@ export default function Dashboard() {
           <h3>Complete Sensor Readings</h3>
           <span className="card-badge">{liveData.length} records</span>
         </div>
-        <div className="table-wrapper">
-          <table className="table comprehensive-table">
-            <thead>
-              <tr>
-                <th>Timestamp</th>
-                <th>Device ID</th>
-                <th>Village</th>
+          <div className="table-wrapper">
+            <table className="table comprehensive-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Device ID</th>
+                  <th>Village</th>
                 <th>Pressure</th>
                 <th>Flow</th>
-                <th>pH</th>
+                  <th>pH</th>
                 <th>Turbidity</th>
                 <th>Temperature</th>
                 <th>Battery</th>
-              </tr>
-            </thead>
-            <tbody>
-              {liveData.slice(0, 20).map((reading) => {
+                </tr>
+              </thead>
+              <tbody>
+                {liveData.slice(0, 20).map((reading) => {
                 const deviceVillage = reading.village_name 
                   ? formatVillageName(reading.village_name) 
                   : (reading.village_id ? `Village ${reading.village_id}` : 'N/A')
-                
-                return (
-                  <tr key={reading.id}>
-                    <td>{new Date(reading.timestamp).toLocaleString()}</td>
-                    <td>{reading.device_id}</td>
-                    <td>{deviceVillage}</td>
+                  
+                  return (
+                    <tr key={reading.id}>
+                      <td>{new Date(reading.timestamp).toLocaleString()}</td>
+                      <td>{reading.device_id}</td>
+                      <td>{deviceVillage}</td>
                     <td>{formatNumber(reading.pressure, 3)} bar</td>
                     <td>{formatNumber(reading.flow_rate, 2)} L/min</td>
                     <td>{formatNumber(reading.ph || reading.metadata?.ph, 3)}</td>
                     <td>{formatNumber(reading.turbidity, 2)} NTU</td>
                     <td>{formatNumber(reading.temperature, 2)}°C</td>
                     <td>{formatNumber(reading.battery_level, 0)}%</td>
-                  </tr>
+                    </tr>
                 )
-              })}
-            </tbody>
-          </table>
+                })}
+              </tbody>
+            </table>
         </div>
       </div>
     </div>

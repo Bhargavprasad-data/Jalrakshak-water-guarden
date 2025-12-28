@@ -48,10 +48,10 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <AppRoutes />
-        <ToastContainer position="top-right" autoClose={3000} />
-      </Router>
+    <Router>
+      <AppRoutes />
+      <ToastContainer position="top-right" autoClose={3000} />
+    </Router>
     </AuthProvider>
   )
 }

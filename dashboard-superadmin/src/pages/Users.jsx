@@ -52,14 +52,6 @@ export default function Users() {
           <h2>Mobile App Users</h2>
           <p className="page-subtitle">View all villagers registered in the mobile application</p>
         </div>
-        <button
-          onClick={fetchUsers}
-          className="btn btn-primary"
-          style={{ height: 'fit-content', padding: '0.5rem 1rem' }}
-          disabled={loading}
-        >
-          {loading ? 'Loading...' : '🔄 Refresh'}
-        </button>
       </div>
 
       <div className="card">

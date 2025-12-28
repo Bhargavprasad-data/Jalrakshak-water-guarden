@@ -296,14 +296,6 @@ export default function Alerts() {
               <option value="30d">Last 30 Days</option>
         </select>
           </div>
-          <div className="filter-actions">
-            <button onClick={() => {
-              fetchVillages()
-              fetchAlerts()
-            }} className="btn btn-primary">
-              🔄 Refresh
-            </button>
-          </div>
         </div>
       </div>
 

@@ -272,31 +272,7 @@ export default function GISMap() {
               ? `Monitoring network around ${formatVillageName(nearestVillage.name)}`
               : 'Real-time sensor monitoring and pipeline visualization'}
           </p>
-        </div>
-        <div className="map-controls">
-          <select
-            value={selectedVillage || ''}
-            onChange={(e) => setSelectedVillage(e.target.value || null)}
-            className="village-select"
-          >
-            <option value={nearestVillage?.id || ''}>
-              {nearestVillage?.name ? formatVillageName(nearestVillage.name) : 'Nearest Village'}
-            </option>
-            {villages
-              .filter((v) => v.id !== nearestVillage?.id)
-              .map((v) => (
-                <option key={v.id} value={v.id}>
-                  {formatVillageName(v.name)}
-                </option>
-              ))}
-          </select>
-          <button onClick={() => {
-            fetchVillages()
-            fetchData()
-          }} className="btn btn-primary">
-            🔄 Refresh
-          </button>
-        </div>
+        </div>  
       </div>
 
       <div className="map-container">

@@ -361,6 +361,18 @@ export const WaterProvider = ({ children }: { children: ReactNode }) => {
       const villages = await villagesRes.json();
       if (!Array.isArray(villages) || villages.length === 0) return null;
 
+      // First, try to find K. Kotturu village (auto-select if available)
+      const kotturuVillage = villages.find((v: any) => {
+        const name = String(v.name || '').toLowerCase();
+        return name.includes('kotturu') || name.includes('k. kotturu') || name === 'k kotturu';
+      });
+
+      if (kotturuVillage && kotturuVillage.id) {
+        console.log('Auto-selecting K. Kotturu village:', kotturuVillage.name);
+        return { id: kotturuVillage.id, name: kotturuVillage.name || 'K. Kotturu' };
+      }
+
+      // If K. Kotturu not found, use GPS-based nearest village
       const toRadians = (value: number) => (value * Math.PI) / 180;
       const getDistanceMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
         const R = 6371000;
@@ -399,16 +411,45 @@ export const WaterProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Update nearest village when location changes
+  // Auto-select K. Kotturu on mount, then update when location changes
   useEffect(() => {
-    if (locationStatus === 'granted' && coords) {
-      findNearestVillage(coords.lat, coords.lon).then((village) => {
-        setNearestVillage(village);
-      });
-    } else {
-      setNearestVillage(null);
+    // First, try to auto-select K. Kotturu without needing location
+    async function autoSelectKotturu() {
+      try {
+        const villagesRes = await fetch(`${API_BASE_URL}/api/gis/villages`);
+        if (!villagesRes.ok) return;
+        
+        const villages = await villagesRes.json();
+        if (!Array.isArray(villages) || villages.length === 0) return;
+
+        // Find K. Kotturu village
+        const kotturuVillage = villages.find((v: any) => {
+          const name = String(v.name || '').toLowerCase();
+          return name.includes('kotturu') || name.includes('k. kotturu') || name === 'k kotturu';
+        });
+
+        if (kotturuVillage && kotturuVillage.id && !nearestVillage) {
+          console.log('Auto-selecting K. Kotturu village:', kotturuVillage.name);
+          setNearestVillage({ id: kotturuVillage.id, name: kotturuVillage.name || 'K. Kotturu' });
+          return; // Don't override with GPS if K. Kotturu is found
+        }
+      } catch (error) {
+        console.warn('Failed to auto-select K. Kotturu:', error);
+      }
     }
-  }, [locationStatus, coords, findNearestVillage]);
+
+    // Try to auto-select K. Kotturu first
+    autoSelectKotturu();
+
+    // Then, if location is granted, use GPS-based selection (but don't override K. Kotturu if already set)
+    if (locationStatus === 'granted' && coords && !nearestVillage) {
+      findNearestVillage(coords.lat, coords.lon).then((village) => {
+        if (village) {
+          setNearestVillage(village);
+        }
+      });
+    }
+  }, [locationStatus, coords, findNearestVillage, nearestVillage]);
 
   // Apply theme to <html> element so Tailwind dark mode works
   useEffect(() => {

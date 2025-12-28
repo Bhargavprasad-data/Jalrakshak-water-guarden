@@ -140,9 +140,6 @@ export default function Complaints() {
             </button>
           ))}
         </div>
-        <button className="btn-refresh" onClick={fetchComplaints}>
-          🔄 Refresh
-        </button>
       </div>
 
       {loading ? (

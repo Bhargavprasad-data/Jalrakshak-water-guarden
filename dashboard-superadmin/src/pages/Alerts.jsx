@@ -340,18 +340,6 @@ export default function Alerts() {
             </select>
           </div>
           <div className="filter-group">
-            <label>Village</label>
-            <select
-              value={selectedVillage}
-              onChange={(e) => setSelectedVillage(e.target.value)}
-            >
-              <option value="all">All Villages</option>
-              {villages.map((v) => (
-                <option key={v.id || v.name} value={v.id || v.name}>{v.name || v.id}</option>
-              ))}
-            </select>
-          </div>
-          <div className="filter-group">
             <label>Time Range</label>
             <select
               value={filters.timeRange}
@@ -362,14 +350,6 @@ export default function Alerts() {
               <option value="7d">Last 7 Days</option>
               <option value="30d">Last 30 Days</option>
             </select>
-          </div>
-          <div className="filter-actions">
-            <button onClick={() => {
-              fetchVillages()
-              fetchAlerts()
-            }} className="btn btn-primary">
-              🔄 Refresh
-            </button>
           </div>
         </div>
       </div>
