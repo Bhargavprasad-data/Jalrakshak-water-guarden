@@ -8,7 +8,7 @@ A comprehensive IoT-based water supply monitoring and management system for rura
 
 ## 📋 Table of Contents      
 
-- [Overview](#overview)   
+- [Overview](#overview)       
 - [Key Features](#key-features)
 - [System Architecture](#system-architecture)
 - [Technology Stack](#technology-stack)
