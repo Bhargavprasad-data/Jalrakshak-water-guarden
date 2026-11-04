@@ -6,7 +6,7 @@ A comprehensive IoT-based water supply monitoring and management system for rura
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Status](https://img.shields.io/badge/status-production--ready-success.svg)
 
-## 📋 Table of Contents      
+## 📋 Table of Contents
    
 - [Overview](#overview)       
 - [Key Features](#key-features)
